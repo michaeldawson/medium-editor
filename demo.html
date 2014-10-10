@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Medium Editor Demo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+
+      @-webkit-keyframes blink {
+        0% {
+          opacity: 1.0;
+        }
+        50% {
+          opacity: 0.0;
+        }
+        100% {
+          opacity: 1.0;
+        }
+      }
+
+      /* We define text styling on the editor and not
+       * the document because we want our caret to
+       * inherit the font size. */
+      .medium-editor {
+        font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
+        letter-spacing: .01rem;
+        font-weight: 300;
+        font-style: normal;
+        font-size: 18px;
+        line-height: 1.8em;
+        color: rgba(0,0,0,0.8);
+        word-wrap: break-word;
+        position: relative;
+      }
+
+      .medium-editor-document p,
+      .medium-editor-document blockquote,
+      .medium-editor-document h3,
+      .medium-editor-document li {
+        cursor: text;
+      }
+
+      .medium-editor-caret {
+        position: absolute;
+        width: 0px;
+        border-left: solid 1px #8f8f8f;
+        height: 1.8em;
+        margin-top: -0.4em;
+        -webkit-animation-name: blink;
+        -webkit-animation-iteration-count: infinite;
+        -webkit-animation-timing-function: steps(1);
+        -webkit-animation-duration: 1s;
+      }
+    </style>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <script src='src/medium-editor.js'></script>
+
+  </head>
+  <body>
+    <div class='container'>
+      <div class='row'>
+        <div class='col-md-8 col-md-8 col-md-offset-2'>
+          <h1>Demo</h1>
+          <form>
+            <textarea id='medium-editor'>
+            </textarea>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type='text/javascript'>
+      var editor = new MediumEditor('#medium-editor');
+    </script>
+  </body>
+</html>
