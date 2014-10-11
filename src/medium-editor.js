@@ -138,7 +138,7 @@ var MediumEditor = Class.extend({
   init: function(selector, options) {
 
     // Ensure we can support this browser/device
-    if (this._unsupportedPlatform()) return false;
+    if (!this._supportedPlatform()) return false;
 
     // Find the element - note we don't support
     // multiple elements at this time
@@ -157,12 +157,344 @@ var MediumEditor = Class.extend({
   },
 
   // Check if the browser/device combination is
-  // supported. Right now our only requirement
-  // is querySelector (supported IE8 and above).
-  _unsupportedPlatform: function() {
-    return !document.querySelector;
+  // supported. We need querySelector and
+  // contentEditable support.
+  _supportedPlatform: function() {
+    return this._querySelectorSupported() && this._contentEditableSupported();
+  },
+
+  // Detects support for querySelector.
+  // Source: https://github.com/Modernizr/Modernizr/blob/master/feature-detects/queryselector.js
+  _querySelectorSupported: function() {
+    return 'querySelector' in document && 'querySelectorAll' in document;
+  },
+
+  // Detects support for the `contenteditable`
+  // attribute.
+  // Source: https://github.com/Modernizr/Modernizr/blob/master/feature-detects/contenteditable.js
+  _contentEditableSupported: function() {
+
+    // early bail out
+    if (!('contentEditable' in document.body)) return false;
+
+    // some mobile browsers (android < 3.0, iOS < 5) claim to support
+    // contentEditable, but but don't really. This test checks to see
+    // confirms wether or not it actually supports it.
+
+    var div = document.createElement('div');
+    div.contentEditable = true;
+    return div.contentEditable === 'true';
+  },
+});
+
+// ---------------------------------------------
+//  Selection
+// ---------------------------------------------
+
+MediumEditor.Selection = Class.extend({
+  init: function(attrs) {
+    this.documentView = attrs['documentView'];
+  },
+
+  // Helper function. We express our caret and
+  // range selection points in document space
+  // (i.e. the index is the paragraph in the
+  // document and the offset is the character
+  // offset within it). However, to apply a
+  // selection, we need to be able to translate
+  // to node space (the internal nodes of an
+  // element and the offset relative to the
+  // start of that node).
+  _translateToNodeSpace: function(ix, offset) {
+    var el = this.documentView.el.childNodes[ix];
+    var textNodes = this._getTextNodesIn(el);
+    for(var i = 0; i < textNodes.length; i++) {
+      var node = textNodes[i];
+      if (offset <= node.length) {
+        return { node: node, offset: offset };
+      } else {
+        offset -= node.length;
+      }
+    }
+  },
+
+  // Source: http://stackoverflow.com/a/6242538/889232
+  _getTextNodesIn: function(node) {
+    var textNodes = [];
+    if (node.nodeType == 3) {
+      textNodes.push(node);
+    } else {
+      var children = node.childNodes;
+      for(var i = 0; i < children.length; i++) {
+        textNodes.push.apply(textNodes, this._getTextNodesIn(children[i]));
+      }
+    }
+    return textNodes;
   }
 });
+
+MediumEditor.NullSelection = MediumEditor.Selection.extend({
+  init: function(attrs) {
+    this._super(attrs);
+  },
+  apply: function() {
+    if (window.getSelection) {
+      window.getSelection().removeAllRanges()
+    } else if (document.selection) {
+      document.selection.empty();
+    }
+  }
+});
+
+MediumEditor.CaretSelection = MediumEditor.Selection.extend({
+  init: function(attrs) {
+    this._super(attrs);
+    this.blockIx = attrs['blockIx'];
+    this.offset = attrs['offset'];
+  },
+  apply: function() {
+    if (document.createRange && window.getSelection) {
+
+      // Normal browsers
+      var range = document.createRange();
+      var sel = window.getSelection();
+      var mapping = this._translateToNodeSpace(this.blockIx, this.offset);
+      range.setStart(mapping.node, mapping.offset);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+    } else if (document.selection && document.body.createTextRange) {
+
+      // IE
+      var textRange = document.body.createTextRange();
+      textRange.moveToElementText(this.documentView.el.childNodes[this.blockIx]);
+      textRange.collapse(true);
+      textRange.moveEnd("character", this.offset);
+      textRange.moveStart("character", this.offset);
+      textRange.select();
+    }
+  }
+});
+
+MediumEditor.RangeSelection = MediumEditor.Selection.extend({
+  init: function(attrs) {
+    this._super(attrs);
+    this.rectangle = attrs['rectangle'];
+    this.startBlockIx = attrs['startBlockIx'];
+    this.startOffset = attrs['startOffset'];
+    this.endBlockIx = attrs['endBlockIx'];
+    this.endOffset = attrs['endOffset'];
+    if (this.startBlockIx == this.endBlockIx && this.startOffset > this.endOffset) {
+      var temp = this.endOffset;
+      this.endOffset = this.startOffset;
+      this.startOffset = temp;
+    }
+  },
+  apply: function() {
+    if (document.createRange && window.getSelection) {
+
+      // Normal browsers
+      var range = document.createRange();
+      var sel = window.getSelection();
+      var startMapping = this._translateToNodeSpace(this.startBlockIx, this.startOffset);
+      var endMapping = this._translateToNodeSpace(this.endBlockIx, this.endOffset);
+      range.setStart(startMapping.node, startMapping.offset);
+      range.setEnd(endMapping.node, endMapping.offset);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+    } else if (document.selection && document.body.createTextRange) {
+
+      // IE
+      var textRange = document.body.createTextRange();
+      textRange.moveToElementText(this.documentView.el.childNodes[this.blockIx]);
+      textRange.collapse(true);
+      textRange.moveEnd("character", this.offset);
+      textRange.moveStart("character", this.offset);
+      textRange.select();
+    }
+  }
+});
+
+MediumEditor.ImageSelection = MediumEditor.Selection.extend({
+  init: function(attrs) {
+    this._super(attrs);
+  }
+});
+
+MediumEditor.VideoSelection = MediumEditor.Selection.extend({
+  init: function(attrs) {
+    this._super(attrs);
+  }
+});
+
+// Create and return the correct selection type
+// based upon the current selection as described
+// by the browser.
+
+MediumEditor.Selection.create = function(attrs) {
+
+  // Determine the start and end indices and
+  // offsets. Note, we need these in document
+  // space (with the indices corresponding to
+  // block indices within the document and
+  // offsets corresponding to character
+  // indices), so they'll need to be
+  // translated from node space first.
+  var startIx, startOffset, endIx, endOffset, rectangle;
+
+  if (window.getSelection) {
+
+    // Normal browsers
+    var sel = window.getSelection();
+    var range = sel.getRangeAt(0);
+
+    var startElement = MediumEditor.Selection._elementFromNode(range.startContainer, attrs['documentView'].el);
+    var endElement = MediumEditor.Selection._elementFromNode(range.endContainer, attrs['documentView'].el);
+    var startIx = Array.prototype.indexOf.call(startElement.parentNode.childNodes, startElement);
+    var endIx = Array.prototype.indexOf.call(endElement.parentNode.childNodes, endElement);
+
+    var startRange = range.cloneRange();
+    startRange.selectNodeContents(startElement);
+    startRange.setEnd(range.startContainer, range.startOffset);
+    startOffset = startRange.toString().length;
+
+    var endRange = range.cloneRange();
+    endRange.selectNodeContents(endElement);
+    endRange.setEnd(range.endContainer, range.endOffset);
+    var endOffset = startRange.toString().length;
+
+    rectangle = range.getBoundingClientRect();
+
+  } else if (document.selection) {
+
+    // IE8
+    var sel = document.selection;
+    var range = sel.createRange();
+    var startInfo = MediumEditor.Selection._ieSelectionInfo(range, 'start');
+    var endInfo = MediumEditor.Selection._ieSelectionInfo(range, 'end');
+
+
+
+    startOffset = startInfo.offset;
+    endOffset = endInfo.offset;
+    startNode = startInfo.node;
+    endNode = endInfo.node;
+    rectangle = sel.getBoundingClientRect();
+
+  }
+
+  if (!MediumEditor.Selection._isAncestorOf(startNode, attrs['documentView'].el)) {
+
+    // Selection is outside the document
+    return new MediumEditor.NullSelection({});
+
+  } else if (startIx == endIx && startOffset == endOffset) {
+
+    // Caret selection
+    return new MediumEditor.CaretSelection({
+      documentView:   attrs['documentView'],
+      blockIx:        startIx,
+      offset:         startOffset
+    });
+
+  } else {
+
+    // Range selection
+    return new MediumEditor.RangeSelection({
+      documentView:   attrs['documentView'],
+      rectangle:      rectangle,
+      startBlockIx:   startIx,
+      startOffset:    startOffset,
+      endBlockIx:     endIx,
+      endOffset:      endOffset
+    });
+  }
+}
+
+// Selection helper functions
+
+// Given a node, find it's element within the
+// the medium editor document.
+MediumEditor.Selection._elementFromNode = function(node, documentEl) {
+  while (node.parentNode != documentEl) {
+    node = node.parentNode;
+  }
+  return node;
+};
+
+// Given a range and a string value indicating
+// whether we're querying the start or end of
+// the range, return an object with properties
+// `node` and `offset` representing the DOM
+// node and offset at that end of the range.
+// This is a polyfill for IE8, adapted from
+// https://gist.github.com/Munawwar/1115251
+
+MediumEditor.Selection._ieSelectionInfo = function(range, whichEnd) {
+  if(!range) return null;
+  whichEnd = whichEnd.toLowerCase();
+  var rangeCopy = range.duplicate(),                  // Create two copies
+      rangeObj  = range.duplicate();
+  rangeCopy.collapse(whichEnd == 'start');            // Collapse the range to either the start or the end
+
+  // moveToElementText throws a fit if the user
+  // clicks an input element
+  var parentElement = rangeCopy.parentElement();
+  if (parentElement instanceof HTMLInputElement) return null;
+
+  // IE8 can't have the selection end at the zeroth
+  // index of the parentElement's first text node.
+  rangeObj.moveToElementText(parentElement);          // Select all text of parentElement
+  rangeObj.setEndPoint('EndToEnd', rangeCopy);        // Move end point to rangeCopy
+
+  // Now traverse through sibling nodes to find the
+  // exact node and the selection's offset.
+  return MediumEditor.Selection._ieFindTextNode(parentElement.firstChild, rangeObj.text);
+};
+
+// Given a node and some text, iterate through it
+// and its siblings until we find a text node
+// which matches the given text.
+MediumEditor.Selection._ieFindTextNode = function(node, text) {
+
+  // Iterate through all the child text nodes and
+  // check for matches. As we go through each text
+  // node keep removing the text value (substring)
+  // from the beginning of the text variable.
+  do {
+    if(node.nodeType == 3) {              // Text node
+      var find = node.nodeValue;
+      if (text.length > 0 && text.indexOf(find) === 0 && text !== find) { //text==find is a special case
+        text = text.substring(find.length);
+      } else {
+        return {
+          node:   node,
+          offset: text.length
+        };
+      }
+    } else if (node.nodeType === 1) {     // Element node
+      var range = document.body.createTextRange();
+      range.moveToElementText(node);
+      text = text.substring(range.text.length);
+    }
+  } while ((node = node.nextSibling));
+  return null;
+};
+
+// Helper method - is one element the ancestor
+// of another? Used to check if the start node
+// in a selection is within the editor.
+MediumEditor.Selection._isAncestorOf = function(descendent, ancestor) {
+  if (ancestor == descendent) {
+    return true;
+  } else if (!descendent.parentNode || descendent.parentNode.nodeType != 1) {
+    return false;
+  } else {
+    return MediumEditor.Selection._isAncestorOf(descendent.parentNode, ancestor);
+  }
+};
 
 // ---------------------------------------------
 //  Simple MVC Framework
@@ -232,16 +564,18 @@ MediumEditor.MVC = Class.extend({
     }
   },
 
-  // Trigger the given event. At this point,
-  // we don't support arguments, but we should.
+  // Trigger the given event. The handler is passed
+  // the same arguments as `trigger`, minus the
+  // event type.
 
   trigger: function(type) {
     type = type.toLowerCase();
     this.eventListeners || (this.eventListeners = {});
+    var args = Array.prototype.slice.call(arguments, 1);
     if (this.eventListeners.hasOwnProperty(type)) {
       var listeners = this.eventListeners[type];
       for (var i = 0; i < listeners.length; i++) {
-        listeners[i].call();
+        listeners[i].apply(this, args);
       }
     }
   }
@@ -256,7 +590,11 @@ MediumEditor.Collection = MediumEditor.MVC.extend({
     this.items = [];
   },
   add: function(item) {
-    this.items.push(item);
+    this.insertAt(item, this.size());
+  },
+  insertAt: function(item, ix) {
+    this.items.splice(ix, 0, item);
+    this.trigger('add', item, ix);
   },
   size: function() {
     return this.items.length;
@@ -269,7 +607,9 @@ MediumEditor.Collection = MediumEditor.MVC.extend({
     if (ix >= 0) this.removeAt(ix);
   },
   removeAt: function(ix) {
+    var item = this.at(ix);
     this.items.splice(ix, 1);
+    this.trigger('remove', item, ix);
   }
 });
 
@@ -301,7 +641,9 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this._parse(attrs['html'] || '');
 
     // TODO - temporary
-    var p = new MediumEditor.ParagraphModel({ text: 'The quick brown fox jumped over the lazy dog' });
+    var p = new MediumEditor.ParagraphModel({ text: 'The quick brown fox jumped over the lazy dog.' });
+    this.children.add(p);
+    p = new MediumEditor.ParagraphModel({ text: 'Lazy wizards brew something something queen.' });
     this.children.add(p);
   },
   html: function() {
@@ -309,6 +651,67 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
   _parse: function(html) {
     // TODO
+  },
+  markup: function(selection, markupKlass) {
+    if (!(selection instanceof MediumEditor.RangeSelection)) return;
+    for(var i = selection.startBlockIx; i <= selection.endBlockIx; i++) {
+      var block = this.children.at(i);
+      var start = i == selection.startBlockIx ? selection.startOffset : 0;
+      var end = i == selection.endBlockIx ? selection.endOffset : block.text.length;
+      block.markups.add(new markupKlass({ start: start, end: end }));
+    }
+  },
+  insertParagraph: function(selection) {
+
+    if (selection instanceof MediumEditor.CaretSelection) {
+
+      // Caret selections are simple - insert a new
+      // paragraph after the current block and fill
+      // it with whatever text occurs after the
+      // offset in the current paragraph
+
+      var block = this.children.at(selection.blockIx);
+      var remainingText = block.text.substring(selection.offset);
+      if (selection.offset < block.text.length) {
+        block.text = block.text.substring(0, selection.offset);
+        block.trigger('changed');
+      }
+
+      var newParagraph = new MediumEditor.ParagraphModel({ text: remainingText });
+      this.children.insertAt(newParagraph, selection.blockIx + 1);
+
+
+
+
+      // range, confined to a single block - insert a new p afterward and give it
+      // all text after the end offset + remove the highlighted text from the
+      // start block
+      //   same for a li
+
+      // range, spanning multiple blocks - kill everything after the offset in
+      // the start block, all blocks in between and everything before the offset
+      // in the end block, then insert an empty paragraph between them
+      //   same for a li
+
+      // caret - insert a new paragraph and fill it with whatever
+      // text occurs in the current paragraph after the offset
+
+
+    }
+
+    // what if it begins on a heading and ends on something else, like an image or a li?
+
+
+    // TODO - if selection is a normal caret, create a new paragraph and
+    // fill it with whatever text occurs after the caret offset in the
+    // current paragraph, then give it focus
+    // if it's a list, add the next item (but don't inherit any of the
+    // markups of the current cursor position)
+    // it it's an image, create a new p under it
+    // if it's a range, kill that range and create a new p
+
+    // enter on an empty list item
+    //   in the middle of a list?
   },
 });
 
@@ -333,17 +736,19 @@ MediumEditor.TextBlockModel = MediumEditor.Model.extend({
   // Abstract
   init: function(attrs) {
     this._super(attrs);
-    this.text = attrs['text'] || '';
+    this.text = (attrs || {})['text'] || '';
     this.markups = new MediumEditor.MarkupCollection();
+    this.on('add', this.markups, this._onMarkupAdded.bind(this));
   },
-  insert: function(str, offset) {
-    this.text = [this.text.slice(0, offset), str, this.text.slice(offset)].join('');
-    this.trigger('changed');
+  innerHTML: function() {
+    return this.markups.apply(this.text) || '<br>';
   },
   html: function() {
-    var text = this.markups.apply(this.text) || '<br>';
-    return '<' + this.tag + '>' + text + '</' + this.tag + '>';
+    return '<' + this.tag + '>' + this.innerHTML() + '</' + this.tag + '>';
   },
+  _onMarkupAdded: function() {
+    this.trigger('changed');
+  }
 });
 
 MediumEditor.ParagraphModel = MediumEditor.TextBlockModel.extend({
@@ -370,6 +775,7 @@ MediumEditor.QuoteModel = MediumEditor.TextBlockModel.extend({
 MediumEditor.UnorderedListModel = MediumEditor.BlockModel.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.tag = 'ul';
     this.text = '';
   },
 });
@@ -377,6 +783,7 @@ MediumEditor.UnorderedListModel = MediumEditor.BlockModel.extend({
 MediumEditor.OrderedListModel = MediumEditor.BlockModel.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.tag = 'ol';
     this.text = '';
   },
 });
@@ -384,18 +791,21 @@ MediumEditor.OrderedListModel = MediumEditor.BlockModel.extend({
 MediumEditor.ImageModel = MediumEditor.BlockModel.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.tag = 'img';
   },
 });
 
 MediumEditor.VideoModel = MediumEditor.BlockModel.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.tag = 'video';
   },
 });
 
 MediumEditor.DividerModel = MediumEditor.BlockModel.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.tag = 'hr';
   },
 });
 
@@ -412,7 +822,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
     this.start = attrs['start'] || 0;
     this.end = attrs['end'] || 0;
     if (this.start > this.end) {
-      var temp = end;
+      var temp = this.end;
       this.end = this.start;
       this.start = temp;
     } else if (this.start == this.end) {
@@ -475,11 +885,10 @@ MediumEditor.BlockCollection = MediumEditor.Collection.extend({
   init: function(attrs) {
     this._super(attrs);
     this.model = attrs['model'];
+    this.on('add', this._onItemAdded.bind(this));
   },
-  add: function(item) {
-    this._super(item);
+  _onItemAdded: function(item) {
     item.parent = this.model;
-    this.on('changed', item, this._onBlockChanged.bind(this));
   },
   html: function() {
     var toReturn = '';
@@ -487,18 +896,19 @@ MediumEditor.BlockCollection = MediumEditor.Collection.extend({
       toReturn += this.at(i).html();
     }
     return toReturn;
-  },
-  _onBlockChanged: function() {
-    this.model.trigger('changed');
-  },
+  }
 });
 
 MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
 
+  init: function(attrs) {
+    this._super(attrs);
+    this.on('add', this._onItemAdded.bind(this));
+  },
+
   // Normalise the collection after new markup is
   // added
-  add: function(markup) {
-    this._super(markup);
+  _onItemAdded: function(markup) {
     this._normalise(markup);
   },
 
@@ -698,74 +1108,25 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
 //  Views
 // ---------------------------------------------
 
+// The editor view. Contains the actual editable
+// document, along with the toolbar and any other
+// related elements.
+
 MediumEditor.EditorView = MediumEditor.View.extend({
   init: function(attrs) {
     this._super(attrs);
-    this.selection = new MediumEditor.NullSelection();
 
     // Create the editor view element
     this.el = document.createElement('div');
     this.el.className = 'medium-editor';
 
-    // Create the caret element
-    this.caret = document.createElement('div');
-    this.caret.className = 'medium-editor-caret';
-    this.caret.style.display = 'none';
-    this.el.appendChild(this.caret);
-
-    // Register listeners. Start with the click
-    // event for selection. Note, we listen on
-    // the document instead of the element
-    // because the user may mousedown on the
-    // element but mouseup outside it (in the
-    // case of a range selection). They may
-    // also click outside the editor (in which
-    // case we set a null selection)
-    this.on('click', document, this._onClick.bind(this));
-
-    // Listen to all key events - if we have
-    // focus, we'll handle those events.
-    this.on('keypress', document, this._onKeyPress.bind(this));
-
     // Add a document view as a child
     this.documentView = new MediumEditor.DocumentView({ model: this.model });
     this.el.appendChild(this.documentView.el);
-  },
 
-  _onClick: function(e) {
-    var selection = MediumEditor.Selection.fromClick({
-      documentView:     this.documentView,
-      event:            e,
-    });
-    this._setSelection(selection);
-  },
-
-  _onKeyPress: function(e) {
-
-    if (!(this.selection instanceof MediumEditor.NullSelection)) {
-      var char = String.fromCharCode(parseInt(e.keyIdentifier.substring(2),16))
-      if (!e.shiftKey) char = char.toLowerCase();       // The key code is always the uppercase equivalent
-      var block = this.selection.block;
-      block.insert(char, this.selection.offset);
-      this.selection.offset++;
-      this._positionCaret();
-    }
-  },
-
-  _setSelection: function(selection) {
-    this.selection = selection;
-    this._positionCaret();
-  },
-
-  _positionCaret: function() {
-    if (this.selection instanceof MediumEditor.CaretSelection) {
-      var rect = this.selection.position();
-      this.caret.style.display = 'block';
-      this.caret.style.top = rect.top + 'px';
-      this.caret.style.left = rect.left + 'px';
-    } else {
-      this.caret.style.display = 'none';
-    }
+    // Create the toolbar
+    this.toolbarView = new MediumEditor.ToolbarView({ model: this.model, editorView: this });
+    this.el.appendChild(this.toolbarView.el);
   }
 });
 
@@ -777,6 +1138,85 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     // Create the document view element
     this.el = document.createElement('div');
     this.el.className = 'medium-editor-document';
+    this.el.contentEditable = true;
+
+    // Listen for events we might want to capture
+    // and cancel, like enter, backspace etc.
+    this.on('keydown', this.el, this._onKeyDown.bind(this));
+
+    // Add views for each existing block
+    for(var i = 0; i < this.model.children.size(); i++) {
+      var block = this.model.children.at(i);
+      this._addBlock(block);
+    }
+
+    // Listen for new blocks being added
+    this.model.children.on('add', this._onBlockAdded.bind(this));
+  },
+
+  _onBlockAdded: function(blockModel, ix) {
+    this._addBlock(blockModel, ix);
+
+    // Give the new block focus
+    new MediumEditor.CaretSelection({ documentView: this, blockIx: ix, offset: 0 }).apply();
+  },
+
+  _addBlock: function(blockModel, ix) {
+    var blockView = new MediumEditor.BlockView({ model: blockModel });
+    if (ix === undefined || ix >= this.el.childNodes.length) {
+      this.el.appendChild(blockView.el);
+    } else {
+      this.el.insertBefore(blockView.el, this.el.childNodes[ix]);
+    }
+  },
+
+  // Capture and prevent any key event which adds
+  // or removes a paragraph.
+  _onKeyDown: function(e) {
+    switch(e.which) {
+      case 77:
+        if (!e.ctrlKey) break;
+      case 13:
+
+        // Enter / Ctrl + m
+        var s = MediumEditor.Selection.create({ documentView: this });
+        this.model.insertParagraph(s);
+
+        e.preventDefault();
+        break;
+
+      case 8:
+
+        // Backspace
+        // TODO - if we're at offset zero
+        // if we're on an image, kill it - and put the cursor where?
+
+        break;
+
+      case 46:
+
+        // Delete
+        // TODO
+
+        break;
+
+      // need to also consider paste and type-over
+
+      // for type-over, our selection may span multiple paragraphs, in which case we'd need to concatenate them together
+      //   may also span 3 or more, killing the intermediate ones
+
+      //
+    }
+  }
+});
+
+// Each block has a separate view
+MediumEditor.BlockView = MediumEditor.View.extend({
+  init: function(attrs) {
+    this._super(attrs);
+
+    // Create the block view element
+    this.el = document.createElement(this.model.tag);
 
     // Listen for changes
     this.on('changed', this.model, this._onChanged.bind(this));
@@ -789,1734 +1229,148 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     this._render();
   },
 
-  // Set the HTML - note we could use sub-views
-  // here for the blocks, but we want the HTML
-  // produced by the document model and HTML
-  // displayed in the editor to be identical.
   _render: function() {
-    this.el.innerHTML = this.model.html();
+    this.el.innerHTML = this.model.innerHTML();
   }
 });
 
-// ---------------------------------------------
-//  Selection
-// ---------------------------------------------
+MediumEditor.ToolbarView = MediumEditor.View.extend({
 
-MediumEditor.Selection = Class.extend({
-  // Abstract
-});
-
-MediumEditor.NullSelection = MediumEditor.Selection.extend({});
-
-MediumEditor.CaretSelection = MediumEditor.Selection.extend({
   init: function(attrs) {
-    this.documentView = attrs['documentView'];
-    if (!this.documentView) throw 'CaretSelection requires a document view';
-    this.offset = attrs['offset'] || 0;
-    this.block = attrs['block'] || null;
+    this._super(attrs);
+    this.editorView = attrs['editorView'];
+
+    // Create the toolbar view element
+    this.el = document.createElement('div');
+    this.el.className = 'medium-editor-toolbar';
+    var arrow = document.createElement('div');
+    arrow.className = 'medium-editor-toolbar-arrow';
+    this.el.appendChild(arrow);
+
+    // Add the buttons
+    this.el.appendChild(new MediumEditor.ToolbarStrongButtonView({ model: this.model, editorView: this.editorView }).el);
+    this.el.appendChild(new MediumEditor.ToolbarEmphasisButtonView({ model: this.model, editorView: this.editorView }).el);
+    this.el.appendChild(new MediumEditor.ToolbarHeadingButtonView({ model: this.model, editorView: this.editorView }).el);
+    this.el.appendChild(new MediumEditor.ToolbarQuoteButtonView({ model: this.model, editorView: this.editorView }).el);
+    this.el.appendChild(new MediumEditor.ToolbarAnchorButtonView({ model: this.model, editorView: this.editorView }).el);
+
+    // Listen to events which may modify the
+    // selection, and position/show/hide the
+    // toolbar accordingly. Note, we bind the
+    // mouseup event to the document because
+    // we need to hide the toolbar when the
+    // use clicks outside the editor, plus a
+    // range selection may begin in the editor
+    // but end outside it.
+    this.on('mouseup', document, this._onMouseUp.bind(this));
+    this.on('keyup', this.editorView.el, this._onKeyUp.bind(this));
   },
-  position: function() {
+  _onMouseUp: function(e) {
+    this._position();
+  },
+  _onKeyUp: function(e) {
+    this._position();
+  },
+  _position: function() {
+    var sel = MediumEditor.Selection.create({ documentView: this.editorView.documentView });
+    if (sel instanceof MediumEditor.RangeSelection) {
+      var rect = sel.rectangle;
 
-    // Get the DOM equivalents from the block
-    var domInfo = MediumEditor.Selection._modelToNode(this.block, this.offset, this.documentView);
-    var node = domInfo.node;
-    var offset = domInfo.offset;
-    var documentRect = this.documentView.el.getBoundingClientRect();
+      // Convert to editor space
+      var editorRect = this.editorView.el.getBoundingClientRect();
+      var top = rect.top - editorRect.top; var bottom = rect.bottom - editorRect.top;
+      var left = rect.left - editorRect.left; var right = rect.right - editorRect.left;
 
-    if (window.getSelection) {
+      // Measure the toolbar itself by creating an
+      // invisible clone
+      var clone = this.el.cloneNode(true);
+      clone.style.visibility = 'hidden';
+      this.el.parentNode.appendChild(clone);
+      clone.className = 'medium-editor-toolbar medium-editor-toolbar-active';
+      var toolbarWidth = clone.offsetWidth;
+      var toolbarHeight = clone.offsetHeight;
+      clone.parentNode.removeChild(clone);
 
-      // Normal browsers
-      var sel = window.getSelection();
-      var range = sel.getRangeAt(0);
-      if (!range) {
-        range = document.createRange();
-        sel.addRange(range);
-      }
-      range.setStart(node, offset);
-      range.setEnd(node, offset);
-      var rect = range.getBoundingClientRect();
-      var top = rect.top;
-      var left = rect.left;
+      // Calculate x and y
+      var x = (right + left - toolbarWidth) / 2.0;
+      var y = top - toolbarHeight + document.body.scrollTop;
 
-      // Occassionally, this returns [0,0,0,0] (see
-      // http://stackoverflow.com/a/8475824/889232). If
-      // so, fall back to inserting then removing a
-      // temporary element (source
-      // http://stackoverflow.com/a/6847328/889232)
+      // Clamp to the editor
+      x = Math.min(Math.max(x, 0), editorRect.width - toolbarWidth);
+      y = Math.min(y, editorRect.height - toolbarHeight);
 
-      if (top == 0 && left == 0) {
-        var span = document.createElement("span");
-
-        // Ensure span has dimensions and position by
-        // adding a zero-width space character
-        span.appendChild(document.createTextNode("\u200b"));
-        range.insertNode(span);
-        rect = span.getClientRects()[0];
-        top = rect.top;
-        left = rect.left;
-        var spanParent = span.parentNode;
-        spanParent.removeChild(span);
-
-        // Glue any broken text nodes back together
-        spanParent.normalize();
-      }
-
-      return { top: top - documentRect.top, left: left - documentRect.left };
-    }
-    else if (document.selection) {
-
-      // IE8
-      var sel = document.selection;
-      var range = sel.createRange();
-      range.setStart(node, offset);
-      range.setEnd(node, offset);
-      return { top: range.offsetTop - documentRect.top, left: range.offsetLeft - documentRect.left };
+      // Set position and make visible
+      this.el.style.left = x + 'px';
+      this.el.style.top = y + 'px';
+      this.el.className = 'medium-editor-toolbar medium-editor-toolbar-active';
+    } else {
+      this.el.className = 'medium-editor-toolbar';
     }
   }
 });
 
-MediumEditor.RangeSelection = MediumEditor.Selection.extend({
+MediumEditor.ToolbarButtonView = MediumEditor.View.extend({
   init: function(attrs) {
-    this.startOffset = attrs['start'] || 0;
-    this.endOffset = attrs['end'] || 0;
-    this.startBlock = attrs['startBlock'] || null;
-    this.endBlock = attrs['endBlock'] || null;
+    this._super(attrs);
+    this.editorView = attrs['editorView'];
+
+    // Create the button element
+    this.el = document.createElement('button');
+    this.el.type = 'button';
+
+    // Listen to clicks
+    this.on('click', this.el, this._onClick.bind(this));
   }
 });
 
-MediumEditor.ImageSelection = MediumEditor.Selection.extend({
+MediumEditor.ToolbarStrongButtonView = MediumEditor.ToolbarButtonView.extend({
   init: function(attrs) {
-    this.block = attrs['block'] || null;
+    this._super(attrs);
+    this.el.innerHTML = '<i class="glyphicon glyphicon-bold"/>';
+  },
+  _onClick: function(e) {
+    var sel = MediumEditor.Selection.create({ documentView: this.editorView.documentView });
+    this.model.markup(sel, MediumEditor.StrongModel);
+    sel.apply();      // Restore the selection - markup will have killed it because the block re-renders
   }
 });
 
-MediumEditor.VideoSelection = MediumEditor.Selection.extend({
+MediumEditor.ToolbarEmphasisButtonView = MediumEditor.ToolbarButtonView.extend({
   init: function(attrs) {
-    this.block = attrs['block'] || null;
+    this._super(attrs);
+    this.el.innerHTML = '<i class="glyphicon glyphicon-italic"/>';
+  },
+  _onClick: function(e) {
+
   }
 });
 
-// Static selection constructors
+MediumEditor.ToolbarHeadingButtonView = MediumEditor.ToolbarButtonView.extend({
+  init: function(attrs) {
+    this._super(attrs);
+    this.el.innerHTML = '<i class="glyphicon glyphicon-header"/>';
+  },
+  _onClick: function(e) {
 
-// Create a selection from a click event. This
-// requires a couple of helper functions to
-// support IE8.
-
-MediumEditor.Selection.fromClick = function(attrs) {
-
-  var e = attrs['event'] || window.event;
-  var target = e.target || e.srcElement;
-
-  // If click is outside this view ...
-  if (!MediumEditor.Selection._isAncestorOf(target, attrs['documentView'].el)) {
-    return new MediumEditor.NullSelection();
   }
+});
 
-  var startOffset, endOffset, startNode, endNode;
+MediumEditor.ToolbarQuoteButtonView = MediumEditor.ToolbarButtonView.extend({
+  init: function(attrs) {
+    this._super(attrs);
+    this.el.innerHTML = '<i class="fa fa-quote-right"/>';
+  },
+  _onClick: function(e) {
 
-  if (window.getSelection) {
-
-    // Normal browsers
-    var sel = window.getSelection();
-    startOffset = sel.anchorOffset;
-    endOffset = sel.focusOffset;
-    startNode = sel.anchorNode;
-    endNode = sel.focusNode;
-
-  } else {
-
-    // IE8
-    var sel = document.selection;
-    var range = sel.createRange();
-    var startInfo = MediumEditor.Selection._ieSelectionInfo(range, 'start');
-    var endInfo = MediumEditor.Selection._ieSelectionInfo(range, 'end');
-    startOffset = startInfo.offset;
-    endOffset = endInfo.offset;
-    startNode = startInfo.node;
-    endNode = endInfo.node;
   }
+});
 
-  if (startNode == endNode && startOffset == endOffset) {
+MediumEditor.ToolbarAnchorButtonView = MediumEditor.ToolbarButtonView.extend({
+  init: function(attrs) {
+    this._super(attrs);
+    this.el.innerHTML = '<i class="glyphicon glyphicon-link"/>';
+  },
+  _onClick: function(e) {
 
-    // Caret selection
-    return new MediumEditor.CaretSelection({
-      documentView: attrs['documentView'],
-      offset:       startOffset,
-      block:        MediumEditor.Selection._nodeToModel(startNode, attrs['documentView'])
-    });
-
-  } else {
-
-    // Range selection
-    return new MediumEditor.CaretSelection({
-      startOffset:  startOffset,
-      endOffset:    endOffset,
-      startBlock:   MediumEditor.Selection._nodeToModel(startNode, attrs['documentView']),
-      endBlock:     MediumEditor.Selection._nodeToModel(endNode, attrs['documentView'])
-    });
   }
-
-};
-
-// Selection helper functions
-
-MediumEditor.Selection._nodeToModel = function(node, documentView) {
-
-  // Walk back up the DOM tree until we find the
-  // document, storing each node as we go
-  var nodes = [];
-  do {
-    nodes.push(node);
-    node = node.parentNode;
-  } while (node != documentView.el);
-
-  // Now walk back down the model one level
-  // using the element index
-  var model = documentView.model;
-  var node = nodes.pop();
-  var indexWithinParent = Array.prototype.indexOf.call(node.parentNode.childNodes, node);
-  return model.children.at(indexWithinParent);
-};
-
-MediumEditor.Selection._modelToNode = function(block, offset, documentView) {
-
-  // Get the DOM element for the block
-  var indexWithinParent = Array.prototype.indexOf.call(documentView.model.children.items, block);
-  var domBlock = documentView.el.childNodes[indexWithinParent];
-
-  // Now just progress through them until we reach
-  // the offset
-  var current = domBlock.childNodes[0];
-  while (offset > current.textContent.length) {
-    current = current.nextSibling;
-    offset -= current.textContent.length;
-  }
-  return { node: current, offset: offset };
-};
-
-// Does the editor contain the given node?
-MediumEditor.Selection._isAncestorOf = function(descendent, ancestor) {
-  if (ancestor == descendent) {
-    return true;
-  } else if (!descendent.parentNode || descendent.parentNode.nodeType != 1) {
-    return false;
-  } else {
-    return MediumEditor.Selection._isAncestorOf(descendent.parentNode, ancestor);
-  }
-};
-
-// Given a range and a string value indicating
-// whether we're querying the start or end of
-// the range, return an object with properties
-// `node` and `offset` representing the DOM
-// node and offset at that end of the range.
-// This is a polyfill for IE8, adapted from
-// https://gist.github.com/Munawwar/1115251
-
-MediumEditor.Selection._ieSelectionInfo = function(range, whichEnd) {
-  if(!range) return null;
-  whichEnd = whichEnd.toLowerCase();
-  var rangeCopy = range.duplicate(),                  // Create two copies
-      rangeObj  = range.duplicate();
-  rangeCopy.collapse(whichEnd == 'start');            // Collapse the range to either the start or the end
-
-  // moveToElementText throws a fit if the user
-  // clicks an input element
-  var parentElement = rangeCopy.parentElement();
-  if (parentElement instanceof HTMLInputElement) return null;
-
-  // IE8 can't have the selection end at the zeroth
-  // index of the parentElement's first text node.
-  rangeObj.moveToElementText(parentElement);          // Select all text of parentElement
-  rangeObj.setEndPoint('EndToEnd', rangeCopy);        // Move end point to rangeCopy
-
-  // Now traverse through sibling nodes to find the
-  // exact node and the selection's offset.
-  return MediumEditor.Selection._ieFindTextNode(parentElement.firstChild, rangeObj.text);
-};
-
-// Given a node and some text, iterate through it
-// and its siblings until we find a text node
-// which matches the given text.
-MediumEditor.Selection._ieFindTextNode = function(node, text) {
-
-  // Iterate through all the child text nodes and
-  // check for matches. As we go through each text
-  // node keep removing the text value (substring)
-  // from the beginning of the text variable.
-  do {
-    if(node.nodeType == 3) {              // Text node
-      var find = node.nodeValue;
-      if (text.length > 0 && text.indexOf(find) === 0 && text !== find) { //text==find is a special case
-        text = text.substring(find.length);
-      } else {
-        return {
-          node:   node,
-          offset: text.length
-        };
-      }
-    } else if (node.nodeType === 1) {     // Element node
-      var range = document.body.createTextRange();
-      range.moveToElementText(node);
-      text = text.substring(range.text.length);
-    }
-  } while ((node = node.nextSibling));
-  return null;
-};
-
-
-
-
-
-
-
-// // ---------------------------------------------
-// //  Selection
-// // ---------------------------------------------
-//
-// // The selection object. A selection can be
-// // none, a caret, a range (spanning multiple
-// // models), an image or a video.
-// //
-// // The selection can be created directly (by
-// // passing in the start and end models and their
-// // offsets), or by using the static constructor
-// // helpers below.
-//
-// MediumEditor.Selection = function(attrs) {
-//
-//   // Instance members, with their default values
-//   this.documentModel = null;
-//   this.documentView = null;
-//   this.startNode = null;
-//   this.startOffset = 0;
-//   this.endNode = null;
-//   this.endOffset = 0;
-//
-//   // Automatically determine type
-//   if (attrs == null) {
-//     this.type = 'none';
-//   } else {
-//     this.documentModel = attrs['documentModel'];
-//     this.documentView = attrs['documentView'];
-//     this.startNode = attrs['startNode'];
-//     this.startOffset = attrs['startOffset'];
-//     this.endNode = attrs['endNode'];
-//     this.endOffset = attrs['endOffset'];
-//     this.type = this.startNode == this.endNode ? 'caret' : 'range';
-//   }
-// }
-//
-// // Create and return an empty selection
-//
-// MediumEditor.Selection.none = function() {
-//   return new MediumEditor.Selection();
-// };
-//
-// // Create a selection from DOM nodes and
-// // offsets. Requires the document model and
-// // view, the start and end DOM nodes and
-// // their relevant offsets. Converts to model
-// // space and returns the selection.
-//
-// MediumEditor.Selection.fromDOM = function(attrs) {
-//   return new MediumEditor.Selection({
-//     documentModel:  attrs['documentModel'],
-//     documentView:   attrs['documentView'],
-//     startNode:      MediumEditor.Selection._mapDOMToModel(attrs['startNode'], attrs['documentModel'], attrs['documentView']),
-//     startOffset:    attrs['startOffset'],
-//     endNode:        MediumEditor.Selection._mapDOMToModel(attrs['endNode'], attrs['documentModel'], attrs['documentView']),
-//     endOffset:      attrs['endOffset']
-//   });
-// };
-//
-// MediumEditor.Selection._mapDOMToModel = function(domNode, documentModel, documentView) {
-//
-//   // Walk back up the DOM tree until we find the
-//   // document, storing each node as we go
-//   var nodes = [];
-//   do {
-//     nodes.push(domNode);
-//     domNode = domNode.parentNode;
-//   } while (domNode != documentView.el);
-//
-//   // Now walk back down the document model,
-//   // using the element indexes.
-//   var model = documentModel;
-//   for(var i = nodes.length - 1; i >= 0; i--) {
-//     var node = nodes[i];
-//     var indexWithinParent = Array.prototype.indexOf.call(node.parentNode.childNodes, node);
-//     model = model.children.at(indexWithinParent);
-//   }
-//
-//   return model;
-// };
-//
-// MediumEditor.Selection._mapModelToDOM = function(nodeModel, documentModel, documentView) {
-//
-//   // Walk back up the model tree until we find the
-//   // root, storing each model as we go
-//   var models = [];
-//   do {
-//     models.push(nodeModel);
-//     nodeModel = nodeModel.parent;
-//   } while (nodeModel != documentModel);
-//
-//   // Now walk back down the DOM tree, using the
-//   // element indexes.
-//   var domNode = documentView.el;
-//   for(var i = models.length - 1; i >= 0; i--) {
-//     var model = models[i];
-//     var indexWithinParent = Array.prototype.indexOf.call(model.parent.children.items, model);
-//     domNode = domNode.childNodes[indexWithinParent];
-//   }
-//
-//   return domNode;
-// };
-//
-// // Create a selection from a click event. This
-// // requires a couple of helper functions to
-// // support IE8.
-//
-// MediumEditor.Selection.fromClick = function(attrs) {
-//
-//   var e = attrs['event'] || window.event;
-//   var target = e.target || e.srcElement;
-//   if (!MediumEditor.Selection._isAncestorOf(target, attrs['documentView'].el)) return MediumEditor.Selection.none();
-//
-//   if (window.getSelection) {
-//
-//     // Normal browsers
-//     var sel = window.getSelection();
-//     return MediumEditor.Selection.fromDOM({
-//       documentModel:  attrs['documentModel'],
-//       documentView:   attrs['documentView'],
-//       startNode:      sel.anchorNode,
-//       startOffset:    sel.anchorOffset,
-//       endNode:        sel.focusNode,
-//       endOffset:      sel.focusOffset
-//     });
-//
-//   } else {
-//
-//     // IE8
-//     var sel = document.selection;
-//     var range = sel.createRange();
-//     var startInfo = MediumEditor.Selection._ieSelectionInfo(range, 'start');
-//     var endInfo = MediumEditor.Selection._ieSelectionInfo(range, 'end');
-//     return MediumEditor.Selection.fromDOM({
-//       documentModel:  attrs['documentModel'],
-//       documentView:   attrs['documentView'],
-//       startNode:      startInfo.node,
-//       startOffset:    startInfo.offset,
-//       endNode:        endInfo.node,
-//       endOffset:      endInfo.offset
-//     });
-//   }
-// };
-//
-// // Does the editor contain the given node?
-// MediumEditor.Selection._isAncestorOf = function(descendent, ancestor) {
-//   if (ancestor == descendent) {
-//     return true;
-//   } else if (!descendent.parentNode || descendent.parentNode.nodeType != 1) {
-//     return false;
-//   } else {
-//     return MediumEditor.Selection._isAncestorOf(descendent.parentNode, ancestor);
-//   }
-// };
-//
-// // Given a range and a string value indicating
-// // whether we're querying the start or end of
-// // the range, return an object with properties
-// // `node` and `offset` representing the DOM
-// // node and offset at that end of the range.
-// // This is a polyfill for IE8, adapted from
-// // https://gist.github.com/Munawwar/1115251
-//
-// MediumEditor.Selection._ieSelectionInfo = function(range, whichEnd) {
-//   if(!range) return null;
-//   whichEnd = whichEnd.toLowerCase();
-//   var rangeCopy = range.duplicate(),                  // Create two copies
-//       rangeObj  = range.duplicate();
-//   rangeCopy.collapse(whichEnd == 'start');            // Collapse the range to either the start or the end
-//
-//   // moveToElementText throws a fit if the user
-//   // clicks an input element
-//   var parentElement = rangeCopy.parentElement();
-//   if (parentElement instanceof HTMLInputElement) return null;
-//
-//   // IE8 can't have the selection end at the zeroth
-//   // index of the parentElement's first text node.
-//   rangeObj.moveToElementText(parentElement);          // Select all text of parentElement
-//   rangeObj.setEndPoint('EndToEnd', rangeCopy);        // Move end point to rangeCopy
-//
-//   // Now traverse through sibling nodes to find the
-//   // exact node and the selection's offset.
-//   return MediumEditor.Selection._ieFindTextNode(parentElement.firstChild, rangeObj.text);
-// };
-//
-// // Given a node and some text, iterate through it
-// // and its siblings until we find a text node
-// // which matches the given text.
-// MediumEditor.Selection._ieFindTextNode = function(node, text) {
-//
-//   // Iterate through all the child text nodes and
-//   // check for matches. As we go through each text
-//   // node keep removing the text value (substring)
-//   // from the beginning of the text variable.
-//   do {
-//     if(node.nodeType == 3) {              // Text node
-//       var find = node.nodeValue;
-//       if (text.length > 0 && text.indexOf(find) === 0 && text !== find) { //text==find is a special case
-//         text = text.substring(find.length);
-//       } else {
-//         return {
-//           node:   node,
-//           offset: text.length
-//         };
-//       }
-//     } else if (node.nodeType === 1) {     // Element node
-//       var range = document.body.createTextRange();
-//       range.moveToElementText(node);
-//       text = text.substring(range.text.length);
-//     }
-//   } while ((node = node.nextSibling));
-//   return null;
-// };
-//
-// // Instance methods on the selection object
-//
-// MediumEditor.Selection.prototype = {
-//   next: function() {
-//     // TODO
-//   },
-//   prev: function() {
-//     // TODO
-//   },
-//   offset: function() {
-//
-//     // This really only makes sense for caret
-//     if (this.type != 'caret') return;
-//
-//     // Get the DOM equivalents from the node models
-//     var domStart = MediumEditor.Selection._mapModelToDOM(this.startNode, this.documentModel, this.documentView);
-//     var domEnd = MediumEditor.Selection._mapModelToDOM(this.endNode, this.documentModel, this.documentView);
-//     var documentRect = this.documentView.el.getBoundingClientRect();
-//
-//     if (window.getSelection) {
-//
-//       // Normal browsers
-//       var sel = window.getSelection();
-//       var range = sel.getRangeAt(0);
-//       if (!range) {
-//         range = document.createRange();
-//         sel.addRange(range);
-//       }
-//       range.setStart(domStart, this.startOffset);
-//       range.setEnd(domEnd, this.endOffset);
-//       var rect = range.getBoundingClientRect();
-//       var top = rect.top;
-//       var left = rect.left;
-//
-//       // Occassionally, this returns [0,0,0,0] (see
-//       // http://stackoverflow.com/a/8475824/889232). If
-//       // so, fall back to inserting then removing a
-//       // temporary element (source
-//       // http://stackoverflow.com/a/6847328/889232)
-//
-//       if (top == 0 && left == 0) {
-//         var span = document.createElement("span");
-//
-//         // Ensure span has dimensions and position by
-//         // adding a zero-width space character
-//         span.appendChild(document.createTextNode("\u200b"));
-//         range.insertNode(span);
-//         rect = span.getClientRects()[0];
-//         top = rect.top;
-//         left = rect.left;
-//         var spanParent = span.parentNode;
-//         spanParent.removeChild(span);
-//
-//         // Glue any broken text nodes back together
-//         spanParent.normalize();
-//       }
-//
-//       return { top: top - documentRect.top, left: left - documentRect.left };
-//     }
-//     else if (document.selection) {
-//
-//       // IE8
-//       var sel = document.selection;
-//       var range = sel.createRange();
-//       range.setStart(domStart, this.startOffset);
-//       range.setEnd(domEnd, this.endOffset);
-//       return { top: range.offsetTop - documentRect.top, left: range.offsetLeft - documentRect.left };
-//     }
-//   },
-// };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// The editor view
-// MediumEditor.EditorView = MediumEditor.View.extend({
-//
-//   caret:                 null,                                  // The caret element
-//   selection:             MediumEditor.Selection.none(),         // The selection object (defaults to none)
-//
-//   initialise: function(attrs) {
-//
-//     // Create the editor view element
-//     this.el = document.createElement('div');
-//     this.el.className = 'medium-editor';
-//
-//     // Create the caret element
-//     this.caret = document.createElement('div');
-//     this.caret.className = 'medium-editor-caret';
-//     this.caret.style.display = 'none';
-//     this.el.appendChild(this.caret);
-//
-//     // Register listeners. Start with the click
-//     // event for selection. Note, we listen on
-//     // the document instead of the element
-//     // because the user may mousedown on the
-//     // element but mouseup outside it (in the
-//     // case of a range selection).
-//     this.on('click', document, this._onClick.bind(this));
-//
-//     // Listen to all key events - if we have
-//     // focus, we'll handle those events.
-//     this.on('keypress', document, this._onKeyDown.bind(this));
-//
-//     // Add a document view as a child
-//     this.documentView = new MediumEditor.DocumentView({ model: this.model });
-//     this.el.appendChild(this.documentView.el);
-//   },
-//
-//   _onClick: function(e) {
-//     var selection = MediumEditor.Selection.fromClick({
-//       documentModel:    this.model,
-//       documentView:     this.documentView,
-//       event:            e,
-//     });
-//     this._setSelection(selection);
-//   },
-//
-//   _setSelection: function(selection) {
-//     this.selection = selection;
-//     this._positionCaret();
-//   },
-//
-//   _positionCaret: function() {
-//     if (this.selection.type == 'caret') {
-//       var offset = this.selection.offset();
-//       this.caret.style.display = 'block';
-//       this.caret.style.top = offset.top + 'px';
-//       this.caret.style.left = offset.left + 'px';
-//     } else {
-//       this.caret.style.display = 'none';
-//     }
-//   },
-//
-//   _hasFocus: function() {
-//     return this.selection.type != 'none';
-//   },
-//
-//   _onKeyDown: function(e) {
-//     if (this._hasFocus()) {
-//
-//       switch(e.which) {
-//         case 9:             // Tab
-//         case 16:            // Shift
-//         case 17:            // Ctrl
-//         case 18:            // Alt
-//         case 19:            // Pause/break
-//         case 20:            // Caps lock
-//         case 27:            // Escape
-//         case 45:            // Insert
-//         case 91:            // Left window key
-//         case 92:            // Right window key
-//           // No effect
-//           break;
-//         case 8:             // Backspace
-//           // TODO
-//           break;
-//         case 13:            // Enter
-//           // TODO
-//           break;
-//         case 33:            // Page up
-//           // TODO
-//           break;
-//         case 34:            // Page down
-//           // TODO
-//           break;
-//         case 35:            // End
-//           // TODO
-//           break;
-//         case 26:            // Home
-//           // TODO
-//           break;
-//         case 37:            // Left arrow
-//           // TODO
-//           break;
-//         case 38:            // Up arrow
-//           // TODO
-//           break;
-//         case 39:            // Right arrow
-//           // TODO
-//           break;
-//         case 40:            // Down arrow
-//           // TODO
-//           break;
-//         case 46:            // Delete
-//           // TODO
-//           break;
-//         default:            // Any other key
-//           if (this.selection.type == 'caret') {
-//             //var char = String.fromCharCode(e.which);
-//             //var char = e.keyIdentifier;
-//             var char = String.fromCharCode(parseInt(e.keyIdentifier.substring(2),16))
-//             if (!e.shiftKey) char = char.toLowerCase();       // The key code is always the uppercase equivalent
-//             var model = this.selection.startNode;
-//             model.insert(char, this.selection.startOffset);
-//             this.selection.startOffset++;
-//             this.selection.endOffset++;
-//             this._positionCaret();
-//           }
-//       }
-//     }
-//   }
-//
-// });
-//
-// // The document view
-// MediumEditor.DocumentView = MediumEditor.View.extend({
-//
-//   initialise: function(attrs) {
-//
-//     // Create the document view element
-//     this.el = document.createElement('div');
-//     this.el.className = 'medium-editor-document';
-//
-//     // Set the HTML - note we could use sub-views
-//     // here for the blocks, but we want the HTML
-//     // produced by the document model and HTML
-//     // displayed in the editor to be identical.
-//     this.el.innerHTML = this.model.html();
-//
-//     // Re-render if the document model is changed.
-//     this.on('changed', this.model, this._onModelChanged.bind(this));
-//   },
-//
-//   // Whenever the model is changed, re-render
-//   _onModelChanged: function() {
-//     this._render();
-//   },
-//
-//   // Very simple render method - just set the
-//   // HTML of the element to the HTML generated by
-//   // the model. That way we keep the model data
-//   // and its representation as close together as
-//   // possible.
-//   _render: function() {
-//     this.el.innerHTML = this.model.html()
-//   }
-//
-// });
-
-
-//
-// // ---------------------------------------------
-// //  Simple MVC Framework
-// // ---------------------------------------------
-// //  Most of this is adapted (and severely
-// //  stripped down) from Backbone.js and
-// //  Underscore. We could just have those as
-// //  dependencies, but we're aiming to be
-// //  dependecy-free, plus there's a lot of stuff
-// //  those libraries do which we don't need.
-// // ---------------------------------------------
-//
-// // Source: http://www.quirksmode.org/dom/events/
-// MediumEditor.BUILT_IN_EVENTS =
-//   ['blur','change','click','contextmenu','copy','cut','dblclick','error',
-//    'focus','focusin','focusout','hashchange','keydown','keypress','keyup',
-//    'load','mousedown','mousecenter','mouseleave','mousemove','mouseout',
-//    'mouseover','mouseup','mousewheel','paste','reset','resize','scroll',
-//    'select','submit','unload','wheel'];
-//
-// // Event handling functions. These will be
-// // available to all models, collections and
-// // views.
-//
-// MediumEditor.Events = {
-//
-//   // Listen for a given event (can be either
-//   // built-in or custom) on the given object
-//   // (obj) and call the given function (fn)
-//   // when it occurs.
-//   //
-//   // Uses the event type to determine if
-//   // it's a built-in event or custom, so
-//   // don't use custom event names which
-//   // already exist.
-//   //
-//   // Can be called as:
-//   //
-//   //   object.on('eventname', otherObject, function() { ... })
-//   //
-//   // Or:
-//   //
-//   //   object.on('eventname', function() { ... })
-//   //
-//   // The second method assumes the object to
-//   // listen to is this.
-//
-//   on: function(type, obj, fn) {
-//
-//     if (typeof obj === 'function') { fn = obj; obj = this; }
-//     type = type.toLowerCase();
-//
-//     if (MediumEditor.BUILT_IN_EVENTS.indexOf(type) >= 0) {
-//
-//       // Built in event - use the browsers default
-//       // event handling mechanisms.
-//       if (obj.addEventListener) {
-//
-//         // Normal browsers
-//         obj.addEventListener(type, fn, false);
-//
-//       } else if (obj.attachEvent) {
-//
-//         // IE8
-//         obj["e" + type + fn] = fn;
-//         obj[type + fn] = function () {
-//          obj["e" + type + fn](window.event);
-//         }
-//         obj.attachEvent("on" + type, obj[type + fn]);
-//
-//       }
-//     } else {
-//
-//       // Custom event
-//       obj.eventListeners || (obj.eventListeners = {});
-//       if (!obj.eventListeners.hasOwnProperty(type)) obj.eventListeners[type] = [];
-//       obj.eventListeners[type].push(fn);
-//     }
-//   },
-//
-//   // Trigger the given event. At this point,
-//   // we don't support arguments, but we should.
-//
-//   trigger: function(type) {
-//     type = type.toLowerCase();
-//     this.eventListeners || (this.eventListeners = {});
-//     if (this.eventListeners.hasOwnProperty(type)) {
-//       var listeners = this.eventListeners[type];
-//       for (var i = 0; i < listeners.length; i++) {
-//         listeners[i].call();
-//       }
-//     }
-//   }
-// };
-//
-// // Default properties and constructor for models
-//
-// MediumEditor.Model = function(attrs) {
-//   attrs || (attrs = {});
-//   this.initialise.apply(this, arguments);
-// };
-// _extend(MediumEditor.Model.prototype, MediumEditor.Events, {
-//   initialise: function(attrs) {}
-// });
-//
-// // Default properties and constructor for
-// // collections
-//
-// MediumEditor.Collection = function(attrs) {
-//   attrs || (attrs = {});
-//   this.initialise.apply(this, arguments);
-// };
-// _extend(MediumEditor.Collection.prototype, MediumEditor.Events, {
-//   items: null,
-//   initialise: function(attrs) {
-//     this.items = [];
-//   },
-//   at: function(ix) {
-//     return this.items[ix];
-//   },
-//   add: function(item) {
-//     this.items.push(item);
-//   },
-//   size: function() {
-//     return this.items.length;
-//   },
-//   html: function() {
-//     var toReturn = '';
-//     for (var i = 0; i < this.size(); i++) {
-//       toReturn += this.at(i).html();
-//     }
-//     return toReturn;
-//   }
-// });
-//
-// // Default properties and constructor for views
-//
-// MediumEditor.View = function(attrs) {
-//   attrs || (attrs = {});
-//   if (attrs.hasOwnProperty('model')) this.model = attrs['model'];
-//   this.initialise.apply(this, arguments);
-// };
-// _extend(MediumEditor.View.prototype, MediumEditor.Events, {
-//   el: null,
-//   model: null,
-//   initialise: function(attrs) {},
-//
-//   // Override on to assume the default subject
-//   // object is the element, not the model
-//   on: function(type, obj, fn) {
-//     if (typeof obj === 'function') { fn = obj; obj = this.el; }
-//     MediumEditor.Events.on(type, obj, fn);
-//   }
-// });
-//
-// // Adapted from Backbone. Establishes the prototype
-// // chain for subclasses.
-// var subclass = function(protoProps) {
-//   var parent = this;
-//   var child = function(){ return parent.apply(this, arguments); };
-//
-//   // Set the prototype chain to inherit from
-//   // `parent`, without calling `parent`'s
-//   // constructor function.
-//   var Surrogate = function(){ this.constructor = child; };
-//   Surrogate.prototype = parent.prototype;
-//   child.prototype = new Surrogate;
-//
-//   // Add prototype properties (instance properties)
-//   // to the subclass, if supplied.
-//   if (protoProps) _extend(child.prototype, protoProps);
-//
-//   // Set a convenience property in case the parent's
-//   // prototype is needed later.
-//   child.__super__ = parent.prototype;
-//
-//   return child;
-// };
-//
-// // Set up inheritance for the model, collection and
-// // view
-// MediumEditor.Model.extend = MediumEditor.Collection.extend = MediumEditor.View.extend = subclass;
-//
-// // ---------------------------------------------
-// //  Collections
-// // ---------------------------------------------
-//
-// MediumEditor.BlockCollection = MediumEditor.Collection.extend({
-// });
-//
-// MediumEditor.NodeCollection = MediumEditor.Collection.extend({
-// });
-//
-// // ---------------------------------------------
-// //  Taxonomy
-// // ---------------------------------------------
-//
-// // Define the permitted taxonomy. This describes
-// // the configuration of blocks and nodes we permit.
-// //
-// // We could define this using rules in each of the
-// // subclasses, but this gives a much better
-// // overview of what's allowed and should make it
-// // easier to make and test changes or add new
-// // blocks/nodes later.
-// //
-// // Begin with the taxonomy of text nodes (used in
-// // paragraphs, quotes and list items). Basically,
-// // a node can contain any other node, except
-// // TextNode (which is a leaf) and a node can't be
-// // a descendent of a node of the same type e.g. a
-// // StrongNode can't be the descendent of another
-// // StrongNode.
-//
-// MediumEditor.TEXT_TAXONOMY = {
-//   'TextNode': true,
-//   'LineBreakNode': true,
-//   'StrongNode': {
-//     'TextNode': true,
-//     'EmphasisNode': {
-//       'TextNode': true,
-//       'AnchorNode': {
-//         'TextNode': true
-//       }
-//     },
-//     'AnchorNode': {
-//       'TextNode': true,
-//       'EmphasisNode': {
-//         'TextNode': true
-//       }
-//     }
-//   },
-//   'EmphasisNode': {
-//     'TextNode': true,
-//     'StrongNode': {
-//       'TextNode': true,
-//       'AnchorNode': {
-//         'TextNode': true
-//       }
-//     },
-//     'AnchorNode': {
-//       'TextNode': true,
-//       'StrongNode': {
-//         'TextNode': true
-//       }
-//     }
-//   },
-//   'AnchorNode': {
-//     'TextNode': true,
-//     'StrongNode': {
-//       'TextNode': true,
-//       'EmphasisNode': {
-//         'TextNode': true
-//       }
-//     },
-//     'EmphasisNode': {
-//       'TextNode': true,
-//       'StrongNode': {
-//         'TextNode': true
-//       }
-//     }
-//   }
-// };
-//
-// // Now the actual taxonomy. All the blocks are
-// // defined here.
-//
-// MediumEditor.PERMITTED_TAXONOMY = {
-//   'ParagraphBlock':   MediumEditor.TEXT_TAXONOMY,
-//   'QuoteBlock':       MediumEditor.TEXT_TAXONOMY,
-//   'HeadingBlock': {
-//     'TextNode':       true,
-//     'LineBreakNode':  true,
-//     'AnchorNode': {
-//       'TextNode':     true
-//     }
-//   },
-//   'UnorderedListBlock': {
-//     'ListItemNode':   MediumEditor.TEXT_TAXONOMY
-//   },
-//   'OrderedListBlock': {
-//     'ListItemNode':   MediumEditor.TEXT_TAXONOMY
-//   },
-//   'DividerBlock':     {},           // Leaf blocks
-//   'ImageBlock':       {},
-//   'VideoBlock':       {}
-// };
-//
-// // ---------------------------------------------
-// //  Node Models
-// // ---------------------------------------------
-//
-// // Now model out the nodes themselves. Begin
-// // with the abstract class and the leaf nodes
-// // (text and line break).
-//
-// MediumEditor.NodeModel = MediumEditor.Model.extend({
-//   type:      '',
-//   parent:    null,
-// });
-// MediumEditor.NodeModel.extend = subclass;
-// MediumEditor.TextNodeModel = MediumEditor.NodeModel.extend({
-//   type:    'TextNode',
-//   content: '',
-//   html: function() {
-//     return this.content;
-//   },
-//   insert: function(str,at) {
-//     this.content = [this.content.slice(0, at), str, this.content.slice(at)].join('');
-//     this.trigger('changed');
-//   }
-// });
-// MediumEditor.LineBreakNodeModel = MediumEditor.NodeModel.extend({
-//   type:    'LineBreakNode',
-//   html: function() {
-//     return '<br>';
-//   }
-// });
-//
-// // Model elements, which are nodes that have
-// // children.
-//
-// MediumEditor.ElementModel = MediumEditor.NodeModel.extend({
-//   children:  new MediumEditor.NodeCollection(),
-//   add: function(node) {
-//     this.children.add(node);
-//     node.parent = this;
-//
-//     // If any child node changes, trigger changed
-//     // on this as well
-//     this.on('changed', node, function() { this.trigger('changed') }.bind(this));
-//   }
-// });
-// MediumEditor.ElementModel.extend = subclass;
-// MediumEditor.StrongNodeModel = MediumEditor.ElementModel.extend({
-//   type: 'StrongNode',
-//   html: function() {
-//     return '<strong>' + this.children.html() + '</strong>';
-//   }
-// });
-// MediumEditor.EmphasisNodeModel = MediumEditor.ElementModel.extend({
-//   type: 'EmphasisNode',
-//   html: function() {
-//     return '<em>' + this.children.html() + '</em>';
-//   }
-// });
-// MediumEditor.AnchorNodeModel = MediumEditor.ElementModel.extend({
-//   type: 'AnchorNode',
-//   href: '',
-//   html: function() {
-//     return '<a href="' + this.href + '">' + this.children.html() + '</a>';
-//   }
-// });
-// MediumEditor.ListItemNodeModel = MediumEditor.ElementModel.extend({
-//   type: 'ListItemNode',
-//   href: '',
-//   html: function() {
-//     return '<li>' + this.children.html() + '</li>';
-//   }
-// });
-//
-// // ---------------------------------------------
-// //  Block Models
-// // ---------------------------------------------
-//
-// MediumEditor.BlockModel = MediumEditor.Model.extend({
-//   type:      ''
-// });
-// MediumEditor.BlockModel.extend = subclass;
-// MediumEditor.ParagraphBlockModel = MediumEditor.BlockModel.extend({
-//   type:      'ParagraphBlock',
-//   children:  new MediumEditor.NodeCollection(),
-//   add: function(node) {
-//     this.children.add(node);
-//     node.parent = this;
-//
-//     // If any child nodes changed, trigger
-//     // changed on this as well
-//     this.on('changed', node, function() {
-//       this.trigger('changed')
-//     }.bind(this));
-//   },
-//   html: function() {
-//     return '<p>' + this.children.html() + '</p>';
-//   }
-// });
-// MediumEditor.HeadingBlockModel = MediumEditor.BlockModel.extend({
-//   type:   'HeadingBlock',
-//   children:  new MediumEditor.NodeCollection(),
-//   html: function() {
-//     return '<h3>' + this.children.html() + '</h3>';
-//   }
-// });
-// MediumEditor.QuoteBlockModel = MediumEditor.BlockModel.extend({
-//   type: 'QuoteBlock',
-//   children:  new MediumEditor.NodeCollection(),
-//   html: function() {
-//     return '<blockquote>' + this.children.html() + '</blockquote>';
-//   }
-// });
-// MediumEditor.UnorderedListBlockModel = MediumEditor.BlockModel.extend({
-//   type: 'UnorderedListBlock',
-//   children:  new MediumEditor.NodeCollection(),
-//   html: function() {
-//     return '<ul>' + this.children.html() + '</ul>';
-//   }
-// });
-// MediumEditor.UnorderedListBlockModel = MediumEditor.BlockModel.extend({
-//   type: 'OrderedListBlock',
-//   children:  new MediumEditor.NodeCollection(),
-//   html: function() {
-//     return '<ol>' + this.children.html() + '</ol>';
-//   }
-// });
-// MediumEditor.DividerModel = MediumEditor.BlockModel.extend({
-//   type: 'DividerBlock',
-//   html: function() {
-//     return '<hr>';
-//   }
-// });
-// MediumEditor.ImageModel = MediumEditor.BlockModel.extend({
-//   type: 'ImageBlock',
-//   src: '',
-//   html: function() {
-//     return '<figure><img src="' + this.src + '"></figure>';
-//   }
-// });
-// MediumEditor.VideoModel = MediumEditor.BlockModel.extend({
-//   type: 'VideoBlock',
-//   html: function() {
-//     return '<figure>TODO</figure>';
-//   }
-// });
-//
-// // ---------------------------------------------
-// //  Document Model
-// // ---------------------------------------------
-//
-// MediumEditor.DocumentModel = MediumEditor.Model.extend({
-//
-//   // Constructor. Parse the intial HTML and create
-//   // a blocks collection.
-//   initialise: function(attrs) {
-//     var html = attrs['html'] || '';
-//     this.children = this._parse(html);
-//   },
-//
-//   // Given a HTML string, parses it and returns a
-//   // MediumEditorBlockCollection.
-//   _parse: function(html) {
-//
-//     // TODO - for now just return a blank paragraph
-//     var toReturn = new MediumEditor.BlockCollection();
-//     var p = new MediumEditor.ParagraphBlockModel();
-//     var lbn = new MediumEditor.LineBreakNodeModel();
-//     var tn = new MediumEditor.TextNodeModel();
-//     tn.content = 'The quick brown fox jumped over the lazy dog';
-//     // p.add(lbn);
-//     p.add(tn);
-//     toReturn.add(p);
-//     p.parent = this;
-//     this.on('changed', p, function() { this.trigger('changed') }.bind(this));
-//     return toReturn;
-//   },
-//
-//   html: function() {
-//     var toReturn = '';
-//     for (var i = 0; i < this.children.size(); i++) {
-//       toReturn += this.children.at(i).html();
-//     }
-//     return toReturn;
-//   }
-//
-// });
-//
-// // ---------------------------------------------
-// //  Selection
-// // ---------------------------------------------
-//
-// // The selection object. A selection can be
-// // none, a caret, a range (spanning multiple
-// // models), an image or a video.
-// //
-// // The selection can be created directly (by
-// // passing in the start and end models and their
-// // offsets), or by using the static constructor
-// // helpers below.
-//
-// MediumEditor.Selection = function(attrs) {
-//
-//   // Instance members, with their default values
-//   this.documentModel = null;
-//   this.documentView = null;
-//   this.startNode = null;
-//   this.startOffset = 0;
-//   this.endNode = null;
-//   this.endOffset = 0;
-//
-//   // Automatically determine type
-//   if (attrs == null) {
-//     this.type = 'none';
-//   } else {
-//     this.documentModel = attrs['documentModel'];
-//     this.documentView = attrs['documentView'];
-//     this.startNode = attrs['startNode'];
-//     this.startOffset = attrs['startOffset'];
-//     this.endNode = attrs['endNode'];
-//     this.endOffset = attrs['endOffset'];
-//     this.type = this.startNode == this.endNode ? 'caret' : 'range';
-//   }
-// }
-//
-// // Create and return an empty selection
-//
-// MediumEditor.Selection.none = function() {
-//   return new MediumEditor.Selection();
-// };
-//
-// // Create a selection from DOM nodes and
-// // offsets. Requires the document model and
-// // view, the start and end DOM nodes and
-// // their relevant offsets. Converts to model
-// // space and returns the selection.
-//
-// MediumEditor.Selection.fromDOM = function(attrs) {
-//   return new MediumEditor.Selection({
-//     documentModel:  attrs['documentModel'],
-//     documentView:   attrs['documentView'],
-//     startNode:      MediumEditor.Selection._mapDOMToModel(attrs['startNode'], attrs['documentModel'], attrs['documentView']),
-//     startOffset:    attrs['startOffset'],
-//     endNode:        MediumEditor.Selection._mapDOMToModel(attrs['endNode'], attrs['documentModel'], attrs['documentView']),
-//     endOffset:      attrs['endOffset']
-//   });
-// };
-//
-// MediumEditor.Selection._mapDOMToModel = function(domNode, documentModel, documentView) {
-//
-//   // Walk back up the DOM tree until we find the
-//   // document, storing each node as we go
-//   var nodes = [];
-//   do {
-//     nodes.push(domNode);
-//     domNode = domNode.parentNode;
-//   } while (domNode != documentView.el);
-//
-//   // Now walk back down the document model,
-//   // using the element indexes.
-//   var model = documentModel;
-//   for(var i = nodes.length - 1; i >= 0; i--) {
-//     var node = nodes[i];
-//     var indexWithinParent = Array.prototype.indexOf.call(node.parentNode.childNodes, node);
-//     model = model.children.at(indexWithinParent);
-//   }
-//
-//   return model;
-// };
-//
-// MediumEditor.Selection._mapModelToDOM = function(nodeModel, documentModel, documentView) {
-//
-//   // Walk back up the model tree until we find the
-//   // root, storing each model as we go
-//   var models = [];
-//   do {
-//     models.push(nodeModel);
-//     nodeModel = nodeModel.parent;
-//   } while (nodeModel != documentModel);
-//
-//   // Now walk back down the DOM tree, using the
-//   // element indexes.
-//   var domNode = documentView.el;
-//   for(var i = models.length - 1; i >= 0; i--) {
-//     var model = models[i];
-//     var indexWithinParent = Array.prototype.indexOf.call(model.parent.children.items, model);
-//     domNode = domNode.childNodes[indexWithinParent];
-//   }
-//
-//   return domNode;
-// };
-//
-// // Create a selection from a click event. This
-// // requires a couple of helper functions to
-// // support IE8.
-//
-// MediumEditor.Selection.fromClick = function(attrs) {
-//
-//   var e = attrs['event'] || window.event;
-//   var target = e.target || e.srcElement;
-//   if (!MediumEditor.Selection._isAncestorOf(target, attrs['documentView'].el)) return MediumEditor.Selection.none();
-//
-//   if (window.getSelection) {
-//
-//     // Normal browsers
-//     var sel = window.getSelection();
-//     return MediumEditor.Selection.fromDOM({
-//       documentModel:  attrs['documentModel'],
-//       documentView:   attrs['documentView'],
-//       startNode:      sel.anchorNode,
-//       startOffset:    sel.anchorOffset,
-//       endNode:        sel.focusNode,
-//       endOffset:      sel.focusOffset
-//     });
-//
-//   } else {
-//
-//     // IE8
-//     var sel = document.selection;
-//     var range = sel.createRange();
-//     var startInfo = MediumEditor.Selection._ieSelectionInfo(range, 'start');
-//     var endInfo = MediumEditor.Selection._ieSelectionInfo(range, 'end');
-//     return MediumEditor.Selection.fromDOM({
-//       documentModel:  attrs['documentModel'],
-//       documentView:   attrs['documentView'],
-//       startNode:      startInfo.node,
-//       startOffset:    startInfo.offset,
-//       endNode:        endInfo.node,
-//       endOffset:      endInfo.offset
-//     });
-//   }
-// };
-//
-// // Does the editor contain the given node?
-// MediumEditor.Selection._isAncestorOf = function(descendent, ancestor) {
-//   if (ancestor == descendent) {
-//     return true;
-//   } else if (!descendent.parentNode || descendent.parentNode.nodeType != 1) {
-//     return false;
-//   } else {
-//     return MediumEditor.Selection._isAncestorOf(descendent.parentNode, ancestor);
-//   }
-// };
-//
-// // Given a range and a string value indicating
-// // whether we're querying the start or end of
-// // the range, return an object with properties
-// // `node` and `offset` representing the DOM
-// // node and offset at that end of the range.
-// // This is a polyfill for IE8, adapted from
-// // https://gist.github.com/Munawwar/1115251
-//
-// MediumEditor.Selection._ieSelectionInfo = function(range, whichEnd) {
-//   if(!range) return null;
-//   whichEnd = whichEnd.toLowerCase();
-//   var rangeCopy = range.duplicate(),                  // Create two copies
-//       rangeObj  = range.duplicate();
-//   rangeCopy.collapse(whichEnd == 'start');            // Collapse the range to either the start or the end
-//
-//   // moveToElementText throws a fit if the user
-//   // clicks an input element
-//   var parentElement = rangeCopy.parentElement();
-//   if (parentElement instanceof HTMLInputElement) return null;
-//
-//   // IE8 can't have the selection end at the zeroth
-//   // index of the parentElement's first text node.
-//   rangeObj.moveToElementText(parentElement);          // Select all text of parentElement
-//   rangeObj.setEndPoint('EndToEnd', rangeCopy);        // Move end point to rangeCopy
-//
-//   // Now traverse through sibling nodes to find the
-//   // exact node and the selection's offset.
-//   return MediumEditor.Selection._ieFindTextNode(parentElement.firstChild, rangeObj.text);
-// };
-//
-// // Given a node and some text, iterate through it
-// // and its siblings until we find a text node
-// // which matches the given text.
-// MediumEditor.Selection._ieFindTextNode = function(node, text) {
-//
-//   // Iterate through all the child text nodes and
-//   // check for matches. As we go through each text
-//   // node keep removing the text value (substring)
-//   // from the beginning of the text variable.
-//   do {
-//     if(node.nodeType == 3) {              // Text node
-//       var find = node.nodeValue;
-//       if (text.length > 0 && text.indexOf(find) === 0 && text !== find) { //text==find is a special case
-//         text = text.substring(find.length);
-//       } else {
-//         return {
-//           node:   node,
-//           offset: text.length
-//         };
-//       }
-//     } else if (node.nodeType === 1) {     // Element node
-//       var range = document.body.createTextRange();
-//       range.moveToElementText(node);
-//       text = text.substring(range.text.length);
-//     }
-//   } while ((node = node.nextSibling));
-//   return null;
-// };
-//
-// // Instance methods on the selection object
-//
-// MediumEditor.Selection.prototype = {
-//   next: function() {
-//     // TODO
-//   },
-//   prev: function() {
-//     // TODO
-//   },
-//   offset: function() {
-//
-//     // This really only makes sense for caret
-//     if (this.type != 'caret') return;
-//
-//     // Get the DOM equivalents from the node models
-//     var domStart = MediumEditor.Selection._mapModelToDOM(this.startNode, this.documentModel, this.documentView);
-//     var domEnd = MediumEditor.Selection._mapModelToDOM(this.endNode, this.documentModel, this.documentView);
-//     var documentRect = this.documentView.el.getBoundingClientRect();
-//
-//     if (window.getSelection) {
-//
-//       // Normal browsers
-//       var sel = window.getSelection();
-//       var range = sel.getRangeAt(0);
-//       if (!range) {
-//         range = document.createRange();
-//         sel.addRange(range);
-//       }
-//       range.setStart(domStart, this.startOffset);
-//       range.setEnd(domEnd, this.endOffset);
-//       var rect = range.getBoundingClientRect();
-//       var top = rect.top;
-//       var left = rect.left;
-//
-//       // Occassionally, this returns [0,0,0,0] (see
-//       // http://stackoverflow.com/a/8475824/889232). If
-//       // so, fall back to inserting then removing a
-//       // temporary element (source
-//       // http://stackoverflow.com/a/6847328/889232)
-//
-//       if (top == 0 && left == 0) {
-//         var span = document.createElement("span");
-//
-//         // Ensure span has dimensions and position by
-//         // adding a zero-width space character
-//         span.appendChild(document.createTextNode("\u200b"));
-//         range.insertNode(span);
-//         rect = span.getClientRects()[0];
-//         top = rect.top;
-//         left = rect.left;
-//         var spanParent = span.parentNode;
-//         spanParent.removeChild(span);
-//
-//         // Glue any broken text nodes back together
-//         spanParent.normalize();
-//       }
-//
-//       return { top: top - documentRect.top, left: left - documentRect.left };
-//     }
-//     else if (document.selection) {
-//
-//       // IE8
-//       var sel = document.selection;
-//       var range = sel.createRange();
-//       range.setStart(domStart, this.startOffset);
-//       range.setEnd(domEnd, this.endOffset);
-//       return { top: range.offsetTop - documentRect.top, left: range.offsetLeft - documentRect.left };
-//     }
-//   },
-// };
-//
-// // ---------------------------------------------
-// //  Views
-// // ---------------------------------------------
-//
-// // The selection object. A selection can be
-// // none, a caret, a range (spanning multiple
-// // models), an image or a video.
-// //
-// // The selection is always represented in model
-// // space. Click and highlight events are
-// // mapped from DOM space into model space via
-// // the EditorView's `_mapDOMSelectionToModels`
-// // method, and model selection is mapped back
-// // into DOM space via the `_mapSelectionToDOM`
-// // method for cursor placement etc.
-// //
-// // With the exception of image and video
-// // selections, the nodes are always leaf nodes
-// // (either text or line break).
-//
-// // The editor view
-// MediumEditor.EditorView = MediumEditor.View.extend({
-//
-//   caret:                 null,                                  // The caret element
-//   selection:             MediumEditor.Selection.none(),         // The selection object (defaults to none)
-//
-//   initialise: function(attrs) {
-//
-//     // Create the editor view element
-//     this.el = document.createElement('div');
-//     this.el.className = 'medium-editor';
-//
-//     // Create the caret element
-//     this.caret = document.createElement('div');
-//     this.caret.className = 'medium-editor-caret';
-//     this.caret.style.display = 'none';
-//     this.el.appendChild(this.caret);
-//
-//     // Register listeners. Start with the click
-//     // event for selection. Note, we listen on
-//     // the document instead of the element
-//     // because the user may mousedown on the
-//     // element but mouseup outside it (in the
-//     // case of a range selection).
-//     this.on('click', document, this._onClick.bind(this));
-//
-//     // Listen to all key events - if we have
-//     // focus, we'll handle those events.
-//     this.on('keypress', document, this._onKeyDown.bind(this));
-//
-//     // Add a document view as a child
-//     this.documentView = new MediumEditor.DocumentView({ model: this.model });
-//     this.el.appendChild(this.documentView.el);
-//   },
-//
-//   _onClick: function(e) {
-//     var selection = MediumEditor.Selection.fromClick({
-//       documentModel:    this.model,
-//       documentView:     this.documentView,
-//       event:            e,
-//     });
-//     this._setSelection(selection);
-//   },
-//
-//   _setSelection: function(selection) {
-//     this.selection = selection;
-//     this._positionCaret();
-//   },
-//
-//   _positionCaret: function() {
-//     if (this.selection.type == 'caret') {
-//       var offset = this.selection.offset();
-//       this.caret.style.display = 'block';
-//       this.caret.style.top = offset.top + 'px';
-//       this.caret.style.left = offset.left + 'px';
-//     } else {
-//       this.caret.style.display = 'none';
-//     }
-//   },
-//
-//   _hasFocus: function() {
-//     return this.selection.type != 'none';
-//   },
-//
-//   _onKeyDown: function(e) {
-//     if (this._hasFocus()) {
-//
-//       switch(e.which) {
-//         case 9:             // Tab
-//         case 16:            // Shift
-//         case 17:            // Ctrl
-//         case 18:            // Alt
-//         case 19:            // Pause/break
-//         case 20:            // Caps lock
-//         case 27:            // Escape
-//         case 45:            // Insert
-//         case 91:            // Left window key
-//         case 92:            // Right window key
-//           // No effect
-//           break;
-//         case 8:             // Backspace
-//           // TODO
-//           break;
-//         case 13:            // Enter
-//           // TODO
-//           break;
-//         case 33:            // Page up
-//           // TODO
-//           break;
-//         case 34:            // Page down
-//           // TODO
-//           break;
-//         case 35:            // End
-//           // TODO
-//           break;
-//         case 26:            // Home
-//           // TODO
-//           break;
-//         case 37:            // Left arrow
-//           // TODO
-//           break;
-//         case 38:            // Up arrow
-//           // TODO
-//           break;
-//         case 39:            // Right arrow
-//           // TODO
-//           break;
-//         case 40:            // Down arrow
-//           // TODO
-//           break;
-//         case 46:            // Delete
-//           // TODO
-//           break;
-//         default:            // Any other key
-//           if (this.selection.type == 'caret') {
-//             //var char = String.fromCharCode(e.which);
-//             //var char = e.keyIdentifier;
-//             var char = String.fromCharCode(parseInt(e.keyIdentifier.substring(2),16))
-//             if (!e.shiftKey) char = char.toLowerCase();       // The key code is always the uppercase equivalent
-//             var model = this.selection.startNode;
-//             model.insert(char, this.selection.startOffset);
-//             this.selection.startOffset++;
-//             this.selection.endOffset++;
-//             this._positionCaret();
-//           }
-//       }
-//     }
-//   }
-//
-// });
-//
-// // The document view
-// MediumEditor.DocumentView = MediumEditor.View.extend({
-//
-//   initialise: function(attrs) {
-//
-//     // Create the document view element
-//     this.el = document.createElement('div');
-//     this.el.className = 'medium-editor-document';
-//
-//     // Set the HTML - note we could use sub-views
-//     // here for the blocks, but we want the HTML
-//     // produced by the document model and HTML
-//     // displayed in the editor to be identical.
-//     this.el.innerHTML = this.model.html();
-//
-//     // Re-render if the document model is changed.
-//     this.on('changed', this.model, this._onModelChanged.bind(this));
-//   },
-//
-//   // Whenever the model is changed, re-render
-//   _onModelChanged: function() {
-//     this._render();
-//   },
-//
-//   // Very simple render method - just set the
-//   // HTML of the element to the HTML generated by
-//   // the model. That way we keep the model data
-//   // and its representation as close together as
-//   // possible.
-//   _render: function() {
-//     this.el.innerHTML = this.model.html()
-//   }
-//
-// });
+});
