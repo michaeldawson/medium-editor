@@ -11,18 +11,18 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     this.el.className = 'medium-editor-document';
     this.el.contentEditable = true;
 
-    // Listen for events we might want to capture
-    // and cancel, like enter, backspace etc.
-    this.on('keydown', this.el, this._onKeyDown.bind(this));
-
-    // Add views for each existing block
+    // Add views for each existing block and
+    // begin listening for any new blocks being
+    // added
+    this.model.children.on('add', this._onBlockAdded.bind(this));
     for(var i = 0; i < this.model.children.size(); i++) {
       var block = this.model.children.at(i);
       this._addBlock(block);
     }
 
-    // Listen for new blocks being added
-    this.model.children.on('add', this._onBlockAdded.bind(this));
+    // Listen for events we might want to capture
+    // and cancel, like enter, backspace etc.
+    this.on('keydown', this.el, this._onKeyDown.bind(this));
   },
 
   _onBlockAdded: function(blockModel, ix) {
@@ -41,10 +41,10 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     }
   },
 
-  // Capture and prevent any key event which adds
-  // or removes a paragraph.
+  // Capture and prevent certain key events
   _onKeyDown: function(e) {
     switch(e.which) {
+
       case 77:
         if (!e.ctrlKey) break;
       case 13:

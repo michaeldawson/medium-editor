@@ -14,6 +14,8 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     // TODO - temporary
     var p = new MediumEditor.ParagraphModel({ text: 'The quick brown fox jumped over the lazy dog.' });
     this.children.add(p);
+    p = new MediumEditor.DividerModel();
+    this.children.add(p);
     p = new MediumEditor.ParagraphModel({ text: 'Lazy wizards brew something something queen.' });
     this.children.add(p);
   },

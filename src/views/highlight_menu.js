@@ -6,7 +6,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.editorView = attrs['editorView'];
+    this.editorEl = attrs['editorEl'];
 
     // Create the element
     this.el = document.createElement('div');
@@ -16,36 +16,25 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     this.el.appendChild(arrow);
 
     // Add the buttons
-    this.el.appendChild(new MediumEditor.HighlightMenuStrongButtonView({ model: this.model, editorView: this.editorView }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuEmphasisButtonView({ model: this.model, editorView: this.editorView }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuHeadingButtonView({ model: this.model, editorView: this.editorView }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuQuoteButtonView({ model: this.model, editorView: this.editorView }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuAnchorButtonView({ model: this.model, editorView: this.editorView }).el);
+    this.el.appendChild(new MediumEditor.HighlightMenuStrongButtonView({ model: this.model }).el);
+    this.el.appendChild(new MediumEditor.HighlightMenuEmphasisButtonView({ model: this.model }).el);
+    this.el.appendChild(new MediumEditor.HighlightMenuHeadingButtonView({ model: this.model }).el);
+    this.el.appendChild(new MediumEditor.HighlightMenuQuoteButtonView({ model: this.model }).el);
+    this.el.appendChild(new MediumEditor.HighlightMenuAnchorButtonView({ model: this.model }).el);
 
-    // Listen to events which may modify the
-    // selection, and position/show/hide the
-    // menu accordingly. Note, we bind the
-    // mouseup event to the document because
-    // we need to hide the menu when the
-    // user clicks outside the editor, plus a
-    // range selection may begin in the editor
-    // but end outside it.
-    this.on('mouseup', document, this._onMouseUp.bind(this));
-    this.on('keyup', this.editorView.el, this._onKeyUp.bind(this));
+    // Listen to selection changes and show/hide/
+    // position accordingly
+    this.on('changed', attrs['selection'], this._onSelectionChanged.bind(this));
   },
-  _onMouseUp: function(e) {
-    this._position();
+  _onSelectionChanged: function(selection) {
+    this._position(selection);
   },
-  _onKeyUp: function(e) {
-    this._position();
-  },
-  _position: function() {
-    var sel = MediumEditor.Selection.create({ documentView: this.editorView.documentView });
-    if (sel instanceof MediumEditor.RangeSelection) {
-      var rect = sel.rectangle;
+  _position: function(selection) {
+    if (selection.type == 'range') {
+      var rect = selection.rectangle;
 
       // Convert to editor space
-      var editorRect = this.editorView.el.getBoundingClientRect();
+      var editorRect = this.editorEl.getBoundingClientRect();
       var top = rect.top - editorRect.top; var bottom = rect.bottom - editorRect.top;
       var left = rect.left - editorRect.left; var right = rect.right - editorRect.left;
 

@@ -5,7 +5,6 @@
 MediumEditor.HighlightMenuButtonView = MediumEditor.View.extend({
   init: function(attrs) {
     this._super(attrs);
-    this.editorView = attrs['editorView'];
 
     // Create the button element
     this.el = document.createElement('button');
