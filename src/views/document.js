@@ -5,6 +5,7 @@
 MediumEditor.DocumentView = MediumEditor.View.extend({
   init: function(attrs) {
     this._super(attrs);
+    this.selection = attrs['selection'];
 
     // Create the document view element
     this.el = document.createElement('div');
@@ -27,9 +28,6 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
 
   _onBlockAdded: function(blockModel, ix) {
     this._addBlock(blockModel, ix);
-
-    // Give the new block focus
-    new MediumEditor.CaretSelection({ documentView: this, blockIx: ix, offset: 0 }).apply();
   },
 
   _addBlock: function(blockModel, ix) {
@@ -50,8 +48,7 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
       case 13:
 
         // Enter / Ctrl + m
-        var s = MediumEditor.Selection.create({ documentView: this });
-        this.model.insertParagraph(s);
+        this.model.insertParagraph(this.selection);
 
         e.preventDefault();
         break;

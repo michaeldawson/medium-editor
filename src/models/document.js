@@ -36,22 +36,22 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
   insertParagraph: function(selection) {
 
-    if (selection instanceof MediumEditor.CaretSelection) {
+    if (selection.type == 'caret') {
 
       // Caret selections are simple - insert a new
       // paragraph after the current block and fill
       // it with whatever text occurs after the
       // offset in the current paragraph
 
-      var block = this.children.at(selection.blockIx);
-      var remainingText = block.text.substring(selection.offset);
-      if (selection.offset < block.text.length) {
-        block.text = block.text.substring(0, selection.offset);
+      var block = this.children.at(selection.startIx);
+      var remainingText = block.text.substring(selection.startOffset);
+      if (selection.startOffset < block.text.length) {
+        block.text = block.text.substring(0, selection.startOffset);
         block.trigger('changed');
       }
 
       var newParagraph = new MediumEditor.ParagraphModel({ text: remainingText });
-      this.children.insertAt(newParagraph, selection.blockIx + 1);
+      this.children.insertAt(newParagraph, selection.startIx + 1);
 
 
 

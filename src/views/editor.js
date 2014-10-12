@@ -21,7 +21,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this.selection = new MediumEditor.SelectionModel({ document: this.model });
 
     // Add a document view as a child
-    this.documentView = new MediumEditor.DocumentView({ model: this.model });
+    this.documentView = new MediumEditor.DocumentView({ model: this.model, selection: this.selection });
     this.el.appendChild(this.documentView.el);
 
     // Create the highlight menu
@@ -45,6 +45,14 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this.on('keydown', this.documentView.el, this._onKeyDown.bind(this));
     this.on('keyup', this.documentView.el, this._onKeyUp.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));     // Listen to document in case the editor loses focus
+
+    // Listen for new blocks being added and give
+    // them focus
+    this.on('add', this.model.children, this._onBlockAdded.bind(this));
+  },
+
+  _onBlockAdded: function(block, ix) {
+    this._setSelection(ix, 0);
   },
 
   _onKeyDown: function(e) {
