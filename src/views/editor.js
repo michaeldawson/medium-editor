@@ -249,6 +249,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         offset -= node.length;
       }
     }
+    return { node: el.childNodes[0], offset: offset };
   },
 
   // Source: http://stackoverflow.com/a/6242538/889232

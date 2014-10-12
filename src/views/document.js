@@ -24,6 +24,15 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     // Listen for events we might want to capture
     // and cancel, like enter, backspace etc.
     this.on('keydown', this.el, this._onKeyDown.bind(this));
+
+    // Listen for normal editing changes. Let
+    // them complete, then flush them through the
+    // model change pipeline. Note, we don't use
+    // keypress here, even though it handles
+    // things like holding down the button nicely,
+    // because we also want to deal with backspace
+    // and other keys not captured by keypress.
+    this.on('keyup', this.el, this._onKeyUp.bind(this));
   },
 
   _onBlockAdded: function(blockModel, ix) {
@@ -58,6 +67,7 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
         // Backspace
         // TODO - if we're at offset zero
         // if we're on an image, kill it - and put the cursor where?
+        // Don't allow backspacing at the start of the doc - kills the p and replaces it with a div
 
         break;
 
@@ -75,5 +85,25 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
 
       //
     }
+  },
+
+  // After edits, flush the changes through the
+  // model change pipeline.
+  _onKeyUp: function(e) {
+
+    // TODO - not interested in the events covered in keydown, like enter etc
+    if (e.which == 13) return;
+
+    var model = this.selection.startBlock;
+    var text = this.el.childNodes[this.selection.startIx].innerText;
+
+    if (text == "\n") text = '';     // Empty paragraphs
+    model.setText(text);
+
+    // TODO: we need to determine the block(s) involved
+    // (if any), map the DOM back to a model representation,
+    // then push those changes to the model.
+    // pretty similar to the process for parsing pasted
+    // text/html.
   }
 });

@@ -9,7 +9,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   init: function(attrs) {
     this._super(attrs);
     this.children = new MediumEditor.BlockCollection({ model: this });
-    this._parse(attrs['html'] || '');
+    this.parse(attrs['html'] || '');
 
     // TODO - temporary
     var p = new MediumEditor.ParagraphModel({ text: 'The quick brown fox jumped over the lazy dog.' });
@@ -22,9 +22,12 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   html: function() {
     return this.children.html();
   },
-  _parse: function(html) {
-    // TODO
+
+  //
+  parse: function(html) {
+
   },
+
   markup: function(selection, markupKlass) {
     if (!(selection instanceof MediumEditor.RangeSelection)) return;
     for(var i = selection.startBlockIx; i <= selection.endBlockIx; i++) {
@@ -36,23 +39,35 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
   insertParagraph: function(selection) {
 
-    if (selection.type == 'caret') {
-
-      // Caret selections are simple - insert a new
-      // paragraph after the current block and fill
-      // it with whatever text occurs after the
-      // offset in the current paragraph
+    var remainderText = '';
+    for (var i = selection.startIx; i <= selection.endIx; i++) {
 
       var block = this.children.at(selection.startIx);
-      var remainingText = block.text.substring(selection.startOffset);
-      if (selection.startOffset < block.text.length) {
-        block.text = block.text.substring(0, selection.startOffset);
-        block.trigger('changed');
+
+      if (i == selection.endIx) {
+        var postText = block.text.substring(selection.endOffset);
+        if (i == selection.startIx) {
+          remainderText = postText;
+        } else {
+          if (selection.endOffset > 0) {
+            block.setText(postText);
+          }
+        }
       }
 
-      var newParagraph = new MediumEditor.ParagraphModel({ text: remainingText });
-      this.children.insertAt(newParagraph, selection.startIx + 1);
+      if (i > selection.startIx && i < selection.endIx) {
+        // TODO - kill it
+      }
 
+      if (i == selection.startIx) {
+        if (selection.startOffset < block.text.length) {
+          block.setText(block.text.substring(0, selection.startOffset));
+        }
+      }
+    }
+
+    var newParagraph = new MediumEditor.ParagraphModel({ text: remainderText });
+    this.children.insertAt(newParagraph, selection.startIx + 1);
 
 
 
@@ -70,7 +85,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       // text occurs in the current paragraph after the offset
 
 
-    }
+
 
     // what if it begins on a heading and ends on something else, like an image or a li?
 
