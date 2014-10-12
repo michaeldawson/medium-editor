@@ -7,127 +7,7 @@
     <title>Medium Editor Demo</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
     <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic' rel='stylesheet' type='text/css'>
-    <style type="text/css">
-
-      .medium-editor {
-        position: relative;
-      }
-
-      .medium-editor-document:focus {
-        outline: none;
-        -moz-outline: none;
-        -webkit-outline: none;
-      }
-
-      .medium-editor-document p,
-      .medium-editor-document blockquote,
-      .medium-editor-document h3,
-      .medium-editor-document li {
-        font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
-        letter-spacing: .01rem;
-        font-weight: 300;
-        font-style: normal;
-        font-size: 18px;
-        line-height: 1.8em;
-        color: rgba(0,0,0,0.8);
-        word-wrap: break-word;
-      }
-
-      .medium-editor-toolbar {
-        display: none;
-        position: absolute;
-        z-index: 1000;
-        top: 0;
-        left: 0;
-        margin-top: -13px;
-        border: 1px solid;
-        border-color: #262625 #1c1c1b #121211;
-        box-shadow: 0 1px 3px -1px rgba(0,0,0,0.8),inset 0 0 1px rgba(255,255,255,0.07),inset 0 0 2px rgba(255,255,255,0.15);
-        background-image: -webkit-gradient(linear, 0 0, 0 100%, from(rgba(49,49,47,0.97)), to(#262625));
-        background-image: -moz-linear-gradient(top, rgba(49,49,47,0.97), #262625);
-        background-image: -webkit-linear-gradient(top, rgba(49,49,47,0.97), #262625);
-        background-image: -o-linear-gradient(top, rgba(49,49,47,0.97), #262625);
-        background-image: linear-gradient(to bottom, rgba(49,49,47,0.97), #262625);
-        background-repeat: repeat-x;
-        filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f731312f', endColorstr='#ff262625', GradientType=0);
-        border-radius: 3px;
-        -webkit-border-radius: 3px;
-        -moz-border-radius: 3px;
-        animation: pop-upwards 300ms forwards linear;
-        -webkit-animation: pop-upwards 300ms forwards linear;
-        -moz-animation: pop-upwards 300ms forwards linear;
-      }
-      .medium-editor-toolbar.medium-editor-toolbar-active {
-        display: block;
-        transition: top 0.15s ease-out, left 0.15s ease-out;
-        -webkit-transition: top 0.15s ease-out, left 0.15s ease-out;
-        -moz-transition: top 0.15s ease-out, left 0.15s ease-out;
-        -o-transition: top 0.15s ease-out, left 0.15s ease-out;
-      }
-      .medium-editor-toolbar button {
-        background: transparent;
-        color: #fff;
-        padding: 12px 16px;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        border: none;
-        font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
-      }
-      .medium-editor-toolbar button:hover,
-      .medium-editor-toolbar button:focus {
-        background: #222221;
-        color: #fff;
-        outline: none;
-        -moz-outline: none;
-        -webkit-outline: none;
-      }
-      .medium-editor-toolbar button:active {
-        color: #60d778;
-      }
-      .medium-editor-toolbar-arrow {
-        left: 50%;
-        bottom: -8px;
-        margin-left: -10px;
-        border-right-color: transparent;
-        border-left-color: transparent;
-        border-top-color: #262625;
-        border-bottom-color: transparent;
-        border-width: 10px 10px 0 10px;
-        position: absolute;
-        width: 0;
-        height: 0;
-        border-style: solid;
-      }
-
-      @-webkit-keyframes pop-upwards{
-        0% {
-          -webkit-transform:matrix(0.97,0,0,1,0,12);
-          transform:matrix(0.97,0,0,1,0,12);
-          opacity:0
-        }
-        20% {
-          -webkit-transform:matrix(0.99,0,0,1,0,2);
-          transform:matrix(0.99,0,0,1,0,2);
-          opacity:.7
-        }
-        40% {
-          -webkit-transform:matrix(1,0,0,1,0,-1);
-          transform:matrix(1,0,0,1,0,-1);
-          opacity:1
-        }
-        70% {
-          -webkit-transform:matrix(1,0,0,1,0,0);
-          transform:matrix(1,0,0,1,0,0);
-          opacity:1
-        }
-        100% {
-          -webkit-transform:matrix(1,0,0,1,0,0);
-          transform:matrix(1,0,0,1,0,0);
-          opacity:1
-        }
-      }
-
-    </style>
+    <link rel="stylesheet" href="medium-editor.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -136,6 +16,39 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
 
+    <script src='src/utils/polyfills.js'></script>
+    <script src='src/utils/inheritance.js'></script>
+    <script src='src/utils/namespace.js'></script>
+    <script src='src/utils/mvc.js'></script>
+    <script src='src/utils/selection.js'></script>
+    <script src='src/models/document.js'></script>
+    <script src='src/models/block.js'></script>
+    <script src='src/models/blocks/text_block.js'></script>
+    <script src='src/models/blocks/paragraph.js'></script>
+    <script src='src/models/blocks/heading.js'></script>
+    <script src='src/models/blocks/quote.js'></script>
+    <script src='src/models/blocks/unordered_list.js'></script>
+    <script src='src/models/blocks/ordered_list.js'></script>
+    <script src='src/models/blocks/image.js'></script>
+    <script src='src/models/blocks/video.js'></script>
+    <script src='src/models/blocks/divider.js'></script>
+    <script src='src/models/markup.js'></script>
+    <script src='src/models/markups/strong.js'></script>
+    <script src='src/models/markups/emphasis.js'></script>
+    <script src='src/models/markups/anchor.js'></script>
+    <script src='src/collections/block.js'></script>
+    <script src='src/collections/markup.js'></script>
+    <script src='src/views/editor.js'></script>
+    <script src='src/views/document.js'></script>
+    <script src='src/views/block.js'></script>
+    <script src='src/views/highlight_menu.js'></script>
+    <script src='src/views/highlight_menu_button.js'></script>
+    <script src='src/views/highlight_menu_buttons/strong.js'></script>
+    <script src='src/views/highlight_menu_buttons/emphasis.js'></script>
+    <script src='src/views/highlight_menu_buttons/heading.js'></script>
+    <script src='src/views/highlight_menu_buttons/quote.js'></script>
+    <script src='src/views/highlight_menu_buttons/anchor.js'></script>
+    <script src='src/views/inline_tooltip.js'></script>
     <script src='src/medium-editor.js'></script>
 
   </head>
