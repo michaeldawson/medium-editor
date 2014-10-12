@@ -22,6 +22,10 @@
   word-wrap: break-word;
 }
 
+.medium-editor-document hr {
+  color: transparent;   // Prevents the cursor from showing
+}
+
 .medium-editor-highlight-menu {
   display: none;
   position: absolute;

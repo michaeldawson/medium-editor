@@ -50,18 +50,44 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   _onKeyDown: function(e) {
     switch (e.which) {
       case 37:    // Left arrow
-
-        // TODO - if selection is at the beginning of a block
-        // and there's a block above and it's a divider, cancel
-        // and skip straight up to the block above that (if
-        // there is one).
-        // If the block above is an image or video, give it
-        // focus.
-
-        break;
       case 38:    // Up arrow
       case 39:    // Right arrow
       case 40:    // Down arrow
+
+        // If an arrow key would put the selection on a
+        // divider, cancel it and try to move it to the
+        // next appropriate selectable block instead.
+
+        var direction = e.which <= 38 ? -1 : 1;     // +1 for down, -1 for up
+
+        // Ignore if we're going left and not at offset
+        // 0, or going right and not at the end of the
+        // block.
+        if (e.which == 37 && this.selection.startOffset > 0) return;
+        if (e.which == 39 && this.selection.endOffset < this.selection.endBlock.text.length) return;
+
+        // Ignore if we're going up but we're already
+        // on the first block, or going down and we're
+        // already on the last block.
+        if (direction < 0 && this.selection.startIx == 0) return;
+        if (direction > 0 && this.selection.endIx == this.model.children.size() - 1) return;
+
+        // Determine the block we're attempting to move
+        // to.
+        var ix = (direction < 0 ? this.selection.startIx : this.selection.endIx) + direction;
+        var targetBlock = this.model.children.at(ix);
+
+        // Is it a divider?
+        if (targetBlock instanceof MediumEditor.DividerModel) {
+
+          // Prevent the action
+          e.preventDefault();
+
+          // Try to find a selectable block instead
+          var newIx = (direction < 0 ? this._findPrevSelectableBlock(ix, true) : this._findNextSelectableBlock(ix, true));
+          this._setSelection(newIx, e.which == 37 ? this.model.children.at(newIx).text.length : 0);
+        }
+
         break;
     }
   },
@@ -72,6 +98,31 @@ MediumEditor.EditorView = MediumEditor.View.extend({
 
   _onMouseUp: function(e) {
     this._refreshSelection();
+  },
+
+  _setSelection: function(ix, offset) {
+
+    if (document.createRange && window.getSelection) {
+
+      // Normal browsers
+      var range = document.createRange();
+      var sel = window.getSelection();
+      var mapping = this._translateToNodeSpace(ix, offset);
+      range.setStart(mapping.node, mapping.offset);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+    } else if (document.selection && document.body.createTextRange) {
+
+      // IE8
+      var textRange = document.body.createTextRange();
+      textRange.moveToElementText(this.documentView.el.childNodes[ix]);
+      textRange.collapse(true);
+      textRange.moveEnd("character", offset);
+      textRange.moveStart("character", offset);
+      textRange.select();
+    }
   },
 
   // Query the browser regarding the state of the
@@ -115,6 +166,18 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       return;
     }
 
+    // The selection/cursor is within the document
+    // element itself, instead of one of the
+    // blocks. Usually means they've clicked on
+    // an unselectable element, like a HR. Use the
+    // offset to determine a more appropriate
+    // selection position.
+    if (startNode == this.documentView.el) {
+      var newIx = this._findNextSelectableBlock(startOffset, true);
+      this._setSelection(newIx, 0);
+      return;
+    }
+
     // Determine the start and end indices, in the
     // context of the document blocks.
     var startElement = this._blockElementFromNode(startNode);
@@ -140,6 +203,58 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       endOffset:    endOffset,
       rectangle:    rectangle
     });
+  },
+
+  _findNextSelectableBlock: function(ix, tryPrev) {
+    for(var i = ix; i < this.model.children.size(); i++) {
+      var block = this.model.children.at(i);
+      if (!(block instanceof MediumEditor.DividerModel)) return i;
+    }
+    return tryPrev ? this._findPrevSelectableBlock(ix, false) : null;
+  },
+
+  _findPrevSelectableBlock: function(ix, tryNext) {
+    for(var i = ix; i >= 0; i--) {
+      var block = this.model.children.at(i);
+      if (!(block instanceof MediumEditor.DividerModel)) return i;
+    }
+    return tryNext ? this._findNextSelectableBlock(ix, false) : null;
+  },
+
+  // Helper function. We express our caret and
+  // range selection points in document space
+  // (i.e. the index is the paragraph in the
+  // document and the offset is the character
+  // offset within it). However, to apply a
+  // selection, we need to be able to translate
+  // to node space (the internal nodes of an
+  // element and the offset relative to the
+  // start of that node).
+  _translateToNodeSpace: function(ix, offset) {
+    var el = this.documentView.el.childNodes[ix];
+    var textNodes = this._getTextNodesIn(el);
+    for(var i = 0; i < textNodes.length; i++) {
+      var node = textNodes[i];
+      if (offset <= node.length) {
+        return { node: node, offset: offset };
+      } else {
+        offset -= node.length;
+      }
+    }
+  },
+
+  // Source: http://stackoverflow.com/a/6242538/889232
+  _getTextNodesIn: function(node) {
+    var textNodes = [];
+    if (node.nodeType == 3) {
+      textNodes.push(node);
+    } else {
+      var children = node.childNodes;
+      for(var i = 0; i < children.length; i++) {
+        textNodes.push.apply(textNodes, this._getTextNodesIn(children[i]));
+      }
+    }
+    return textNodes;
   },
 
   // The offsets returned by selection objects are
