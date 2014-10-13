@@ -25,11 +25,11 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this.el.appendChild(this.documentView.el);
 
     // Create the highlight menu
-    this.highlightMenuView = new MediumEditor.HighlightMenuView({ model: this.model, selection: this.selection, editorEl: this.el });
+    this.highlightMenuView = new MediumEditor.HighlightMenuView({ model: this.model, selection: this.selection, editorView: this });
     this.el.appendChild(this.highlightMenuView.el);
 
     // Create the inline tooltip
-    this.inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this.model, selection: this.selection });
+    this.inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this.model, selection: this.selection, editorView: this });
     this.el.appendChild(this.inlineTooltipView.el);
 
     // Listen for any events which may modify the

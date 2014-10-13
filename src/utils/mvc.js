@@ -34,37 +34,43 @@ MediumEditor.MVC = Class.extend({
   //
   // The second method assumes the object to
   // listen to is this.
+  //
+  // Accepts multiple event types, separated
+  // by spaces.
 
   on: function(type, obj, fn) {
 
     if (typeof obj === 'function') { fn = obj; obj = this; }
-    type = type.toLowerCase();
+    var types = type.split(' ');
+    for(var i = 0; i < types.length; i++) {
+      type = types[i].toLowerCase();
 
-    if (MediumEditor.BUILT_IN_EVENTS.indexOf(type) >= 0) {
+      if (MediumEditor.BUILT_IN_EVENTS.indexOf(type) >= 0) {
 
-      // Built in event - use the browsers default
-      // event handling mechanisms.
-      if (obj.addEventListener) {
+        // Built in event - use the browsers default
+        // event handling mechanisms.
+        if (obj.addEventListener) {
 
-        // Normal browsers
-        obj.addEventListener(type, fn, false);
+          // Normal browsers
+          obj.addEventListener(type, fn, false);
 
-      } else if (obj.attachEvent) {
+        } else if (obj.attachEvent) {
 
-        // IE8
-        obj["e" + type + fn] = fn;
-        obj[type + fn] = function () {
-         obj["e" + type + fn](window.event);
+          // IE8
+          obj["e" + type + fn] = fn;
+          obj[type + fn] = function () {
+           obj["e" + type + fn](window.event);
+          }
+          obj.attachEvent("on" + type, obj[type + fn]);
+
         }
-        obj.attachEvent("on" + type, obj[type + fn]);
+      } else {
 
+        // Custom event
+        obj.eventListeners || (obj.eventListeners = {});
+        if (!obj.eventListeners.hasOwnProperty(type)) obj.eventListeners[type] = [];
+        obj.eventListeners[type].push(fn);
       }
-    } else {
-
-      // Custom event
-      obj.eventListeners || (obj.eventListeners = {});
-      if (!obj.eventListeners.hasOwnProperty(type)) obj.eventListeners[type] = [];
-      obj.eventListeners[type].push(fn);
     }
   },
 

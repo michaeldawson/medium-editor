@@ -6,7 +6,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.editorEl = attrs['editorEl'];
+    this.editorView = attrs['editorView'];
 
     // Create the element
     this.el = document.createElement('div');
@@ -34,7 +34,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
       var rect = selection.rectangle;
 
       // Convert to editor space
-      var editorRect = this.editorEl.getBoundingClientRect();
+      var editorRect = this.editorView.el.getBoundingClientRect();
       var top = rect.top - editorRect.top; var bottom = rect.bottom - editorRect.top;
       var left = rect.left - editorRect.left; var right = rect.right - editorRect.left;
 

@@ -9,8 +9,15 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes(attrs);
   },
   update: function(attrs) {
-    this._setAttributes(attrs);
-    this.trigger('changed', this);
+    if (attrs['startIx'] != this.startIx ||
+        attrs['startOffset'] != this.startOffset ||
+        attrs['endIx'] != this.endIx ||
+        attrs['endOffset'] != this.endOffset) {
+
+          this._setAttributes(attrs);
+          this.trigger('changed', this);
+
+    }
   },
   null: function() {
     this.update({});
