@@ -4,34 +4,45 @@
 
 MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
+  BUTTONS: {
+    'image':          '<i class="glyphicon glyphicon-picture"></i>',
+    'video':          '<i class="glyphicon glyphicon-facetime-video"></i>',
+    'hr':             '<span>- -</span>'
+  },
+
+  CLASS_NAME:         'medium-editor-inline-tooltip',
+
+  ACTIVE_CLASS_NAME:  'medium-editor-inline-tooltip-active',
+
+  OPEN_CLASS_NAME:    'medium-editor-inline-tooltip-open',
+
+  TOGGLE_CLASS_NAME:  'medium-editor-inline-tooltip-toggle',
+
+  BUTTON_CLASS_NAME:  'medium-editor-inline-tooltip-button',
+
   init: function(attrs) {
     this._super(attrs);
     this.editorView = attrs['editorView'];
 
     // Create the element
     this.el = document.createElement('div');
-    this.el.className = 'medium-editor-inline-tooltip';
+    this.el.className = this.CLASS_NAME;
 
     // Create the toggle button
     var toggle = document.createElement('button');
     toggle.type = 'button';
-    toggle.className = 'medium-editor-inline-tooltip-toggle';
+    toggle.className = this.TOGGLE_CLASS_NAME;
     this.on('mousedown touchstart', toggle, this._onToggle.bind(this));
     toggle.appendChild(document.createElement('span'));
     this.el.appendChild(toggle);
 
     // Create buttons
-    var buttons = {
-      'image':        '<i class="glyphicon glyphicon-picture"></i>',
-      'video':        '<i class="glyphicon glyphicon-facetime-video"></i>',
-      'hr':           '<span>- -</span>'
-    };
-    for (var action in buttons) {
-      if (buttons.hasOwnProperty(action)) {
-        var html = buttons[action];
+    for (var action in this.BUTTONS) {
+      if (this.BUTTONS.hasOwnProperty(action)) {
+        var html = this.BUTTONS[action];
         var button = document.createElement('button');
         button.type = 'button';
-        button.className = 'medium-editor-inline-tooltip-button';
+        button.className = this.BUTTON_CLASS_NAME;
         button.innerHTML = html;
         button.setAttribute('data', "action: '" + action + "'");
         this.on('mousedown touchstart', button, this._onButton.bind(this));
@@ -44,11 +55,11 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     this.on('changed', attrs['selection'], this._onSelectionChanged.bind(this));
   },
   _onToggle: function() {
-    if (this.el.className.indexOf('medium-editor-inline-tooltip-open') < 0) {
-      this.el.className = 'medium-editor-inline-tooltip medium-editor-inline-tooltip-active medium-editor-inline-tooltip-open';
-    } else {
-      this.el.className = 'medium-editor-inline-tooltip medium-editor-inline-tooltip-active';
+    var baseClasses = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME];
+    if (this.el.className.indexOf(this.OPEN_CLASS_NAME) < 0) {
+      baseClasses.push(this.OPEN_CLASS_NAME);
     }
+    this.el.className = baseClasses.join(' ');
   },
   _onButton: function() {
     // TODO
@@ -68,12 +79,12 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
         var top = rect.top - editorRect.top;
         this.el.style.top = top + 'px';
 
-        this.el.className = 'medium-editor-inline-tooltip medium-editor-inline-tooltip-active';
+        this.el.className = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME].join(' ');
 
     } else {
 
         // Otherwise hide it
-        this.el.className = 'medium-editor-inline-tooltip';
+        this.el.className = this.CLASS_NAME;
     }
   }
 });
