@@ -226,8 +226,8 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // to the offsets within their parent node, not
     // the character offsets within the elements).
     // Convert them.
-    startOffset = this._measureTextOffset(startOffset, startNode, startElement, range, true);
-    endOffset = this._measureTextOffset(endOffset, endNode, endElement, range, false);
+    startOffset = this._measureTextOffset(startElement, range, true);
+    endOffset = this._measureTextOffset(endElement, range, false);
 
     // Grab the rectangle
     var rectangle = range.getBoundingClientRect();
@@ -287,7 +287,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   // measure the text directly, as per http://stackoverflow.com/a/4812022/889232,
   // however that didn't allow us to account for
   // lists.
-  _measureTextOffset: function(offset, node, element, range, start) {
+  _measureTextOffset: function(element, range, start) {
 
     var treeWalker = document.createTreeWalker(
       element,
@@ -309,7 +309,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       charCount += len;
     }
     if (range.startContainer.nodeType == 3) {
-      charCount += range.startOffset;
+      charCount += (start ? range.startOffset : range.endOffset);
     }
     return charCount;
   },

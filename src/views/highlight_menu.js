@@ -4,6 +4,14 @@
 
 MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
+  BUTTONS: {
+    'strong':         '<i class="glyphicon glyphicon-bold"></i>',
+    'emphasis':       '<i class="glyphicon glyphicon-italic"></i>',
+    'heading':        '<i class="glyphicon glyphicon-header"></i>',
+    'quote':          '<i class="glyphicon fa fa-quote-right"></i>',
+    'anchor':         '<i class="glyphicon glyphicon-link"></i>'
+  },
+
   init: function(attrs) {
     this._super(attrs);
     this.editorView = attrs['editorView'];
@@ -15,16 +23,33 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     arrow.className = 'medium-editor-highlight-menu-arrow';
     this.el.appendChild(arrow);
 
-    // Add the buttons
-    this.el.appendChild(new MediumEditor.HighlightMenuStrongButtonView({ model: this.model }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuEmphasisButtonView({ model: this.model }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuHeadingButtonView({ model: this.model }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuQuoteButtonView({ model: this.model }).el);
-    this.el.appendChild(new MediumEditor.HighlightMenuAnchorButtonView({ model: this.model }).el);
+    // Create buttons
+    for (var action in this.BUTTONS) {
+      if (this.BUTTONS.hasOwnProperty(action)) {
+        var html = this.BUTTONS[action];
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.innerHTML = html;
+        button.setAttribute('data-action', action);
+        this.on('mousedown touchstart', button, this._onButton.bind(this));
+        this.el.appendChild(button);
+      }
+    }
 
     // Listen to selection changes and show/hide/
     // position accordingly
     this.on('changed', this.editorView.selection, this._onSelectionChanged.bind(this));
+  },
+  _onButton: function(e) {
+    var action = e.currentTarget.getAttribute('data-action');
+    switch(action) {
+      case 'quote':
+        this.model.changeBlockType(this.editorView.selection, 'quote');
+        break;
+      case 'heading':
+        this.model.changeBlockType(this.editorView.selection, 'heading');
+        break;  
+    }
   },
   _onSelectionChanged: function(selection) {
     this._position(selection);
