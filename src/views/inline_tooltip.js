@@ -7,7 +7,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
   BUTTONS: {
     'image':          '<i class="glyphicon glyphicon-picture"></i>',
     'video':          '<i class="glyphicon glyphicon-facetime-video"></i>',
-    'hr':             '<span>- -</span>'
+    'divider':        '<span>- -</span>'
   },
 
   CLASS_NAME:         'medium-editor-inline-tooltip',
@@ -44,7 +44,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
         button.type = 'button';
         button.className = this.BUTTON_CLASS_NAME;
         button.innerHTML = html;
-        button.setAttribute('data', "action: '" + action + "'");
+        button.setAttribute('data-action', action);
         this.on('mousedown touchstart', button, this._onButton.bind(this));
         this.el.appendChild(button);
       }
@@ -52,7 +52,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', attrs['selection'], this._onSelectionChanged.bind(this));
+    this.on('changed', this.editorView.selection, this._onSelectionChanged.bind(this));
   },
   _onToggle: function() {
     var baseClasses = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME];
@@ -61,15 +61,27 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     }
     this.el.className = baseClasses.join(' ');
   },
-  _onButton: function() {
-    // TODO
+  _onButton: function(e) {
+    var action = e.currentTarget.getAttribute('data-action');
+    switch(action) {
+      case 'image':
+
+        break;
+      case 'video':
+
+        break;
+      case 'divider':
+        this.model.changeBlockType(this.editorView.selection, 'divider');
+        this.editorView._refreshSelection();
+        break;
+    }
   },
   _onSelectionChanged: function(selection) {
     this._position(selection);
   },
   _position: function(selection) {
     if (selection.type == 'caret' &&                                      // If it's a caret selection ...
-        selection.startBlock instanceof MediumEditor.ParagraphModel &&    // ... and we're on a paragraph ...
+        selection.startBlock.type == 'paragraph' &&                       // ... and we're on a paragraph ...
         selection.startBlock.text == '') {                                // ... and it's blank ...
 
         // Position and show the element

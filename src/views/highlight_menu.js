@@ -24,7 +24,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', attrs['selection'], this._onSelectionChanged.bind(this));
+    this.on('changed', this.editorView.selection, this._onSelectionChanged.bind(this));
   },
   _onSelectionChanged: function(selection) {
     this._position(selection);

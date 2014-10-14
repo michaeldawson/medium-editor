@@ -21,15 +21,15 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this.selection = new MediumEditor.SelectionModel({ document: this.model });
 
     // Add a document view as a child
-    this.documentView = new MediumEditor.DocumentView({ model: this.model, selection: this.selection });
+    this.documentView = new MediumEditor.DocumentView({ model: this.model });
     this.el.appendChild(this.documentView.el);
 
     // Create the highlight menu
-    this.highlightMenuView = new MediumEditor.HighlightMenuView({ model: this.model, selection: this.selection, editorView: this });
+    this.highlightMenuView = new MediumEditor.HighlightMenuView({ model: this.model, editorView: this });
     this.el.appendChild(this.highlightMenuView.el);
 
     // Create the inline tooltip
-    this.inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this.model, selection: this.selection, editorView: this });
+    this.inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this.model, editorView: this });
     this.el.appendChild(this.inlineTooltipView.el);
 
     // Listen for any events which may modify the
@@ -86,7 +86,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         var targetBlock = this.model.children.at(ix);
 
         // Is it a divider?
-        if (targetBlock instanceof MediumEditor.DividerModel) {
+        if (targetBlock.type == 'divider') {
 
           // Prevent the action
           e.preventDefault();
@@ -97,15 +97,98 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         }
 
         break;
+
+      case 77:
+        if (!e.ctrlKey) break;
+      case 13:
+
+        // Enter / Ctrl + m
+        var sel = this.selection;
+
+        if (sel.type == 'caret' && (
+              sel.startBlock.type == 'ordered_list' ||
+              sel.startBlock.type == 'unordered_list'
+           )) {
+
+           var listItemsText = this._selectedBlockText().substr(0, sel.startOffset).split("\n");
+           var last = listItemsText[listItemsText.length - 1];
+           if (last != "") {
+             return;
+           }
+        }
+
+        this.model.insertParagraph(this.selection);
+
+        e.preventDefault();
+        break;
+
+      case 8:
+
+        // Backspace
+        // TODO - if we're at offset zero
+        // if we're on an image, kill it - and put the cursor where?
+        // Don't allow backspacing at the start of the doc - kills the p and replaces it with a div
+
+        break;
+
+      case 46:
+
+        // Delete
+        // TODO
+
+        break;
+
+      // need to also consider paste and type-over
+
+      // for type-over, our selection may span multiple paragraphs, in which case we'd need to concatenate them together
+      //   may also span 3 or more, killing the intermediate ones
+
+      //
     }
   },
 
+  // Listen for normal editing changes. Let
+  // them complete, then flush them through the
+  // model change pipeline. Note, we don't use
+  // keypress here, even though it handles
+  // things like holding down the button nicely,
+  // because we also want to deal with backspace
+  // and other keys not captured by keypress.
   _onKeyUp: function(e) {
     this._refreshSelection();
+
+    // After edits, flush the changes through the
+    // model change pipeline.
+    // TODO - not interested in the events covered in keydown, like enter etc
+    if (e.which == 13) return;
+
+    var text = this._selectedBlockText();
+
+    if (text.match(/^1\.\s/)) {
+      this.model.changeBlockType(this.selection, 'ordered_list');
+      this._setSelection(this.selection.startIx, 0);
+    } else if (text.match(/^\*\s/)) {
+      this.model.changeBlockType(this.selection, 'unordered_list');
+      this._setSelection(this.selection.startIx, 0);
+    } else {
+
+      if (text == "\n") text = '';     // Empty paragraphs
+      this.selection.startBlock.setText(text);
+
+      // TODO: we need to determine the block(s) involved
+      // (if any), map the DOM back to a model representation,
+      // then push those changes to the model.
+      // pretty similar to the process for parsing pasted
+      // text/html.
+    }
   },
 
   _onMouseUp: function(e) {
     this._refreshSelection();
+  },
+
+  _selectedBlockText: function() {
+    return this.documentView.el.childNodes[this.selection.startIx].innerText;
   },
 
   _setSelection: function(ix, offset) {
@@ -164,8 +247,8 @@ MediumEditor.EditorView = MediumEditor.View.extend({
 
       startNode = startInfo.node;
       startOffset = startInfo.offset;
-      startNode = endInfo.node;
-      startOffset = endInfo.offset;
+      endNode = endInfo.node;
+      endOffset = endInfo.offset;
     }
 
     // Is the selection outside the document?
@@ -216,7 +299,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   _findNextSelectableBlock: function(ix, tryPrev) {
     for(var i = ix; i < this.model.children.size(); i++) {
       var block = this.model.children.at(i);
-      if (!(block instanceof MediumEditor.DividerModel)) return i;
+      if (!(block.type == 'divider')) return i;
     }
     return tryPrev ? this._findPrevSelectableBlock(ix, false) : null;
   },
@@ -224,7 +307,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   _findPrevSelectableBlock: function(ix, tryNext) {
     for(var i = ix; i >= 0; i--) {
       var block = this.model.children.at(i);
-      if (!(block instanceof MediumEditor.DividerModel)) return i;
+      if (!(block.type == 'divider')) return i;
     }
     return tryNext ? this._findNextSelectableBlock(ix, false) : null;
   },
@@ -269,19 +352,36 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   // The offsets returned by selection objects are
   // relative to their parent node, not the char
   // offset within the element. Convert them.
-  // Adapted from http://stackoverflow.com/a/4812022/889232
+  // Adapted from http://stackoverflow.com/a/4770562/889232
+  // Note we used to use the range objects to
+  // measure the text directly, as per http://stackoverflow.com/a/4812022/889232,
+  // however that didn't allow us to account for
+  // lists.
   _measureTextOffset: function(offset, node, element, range, start) {
-    if (window.getSelection) {
-      var textRange = range.cloneRange();
-      textRange.selectNodeContents(element);
-      textRange.setEnd(node, offset);
-      return textRange.toString().length;
-    } else if (document.selection) {
-      var textRange = doc.body.createTextRange();
-      textRange.moveToElementText(element);
-      textRange.setEndPoint(start ? "StartToEnd" : "EndToEnd", range);
-      return textRange.text.length;
+
+    var treeWalker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+      function(node) {
+        var nodeRange = document.createRange();
+        nodeRange.selectNode(node);
+        var beforeRange = nodeRange.compareBoundaryPoints(Range.END_TO_END, range) < 1;
+        var isLiOrTextNode = node.nodeType == 3 || (node.nodeType == 1 && node.tagName.toLowerCase() == 'li');
+        return beforeRange && isLiOrTextNode ?
+            NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      },
+      false
+    );
+
+    var charCount = 0;
+    while (treeWalker.nextNode()) {
+      var len = treeWalker.currentNode.nodeType == 3 ? treeWalker.currentNode.length : 1;
+      charCount += len;
     }
+    if (range.startContainer.nodeType == 3) {
+      charCount += range.startOffset;
+    }
+    return charCount;
   },
 
   // Returns true if the document is an ancestor of

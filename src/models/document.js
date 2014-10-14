@@ -12,11 +12,11 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.parse(attrs['html'] || '');
 
     // TODO - temporary
-    var p = new MediumEditor.ParagraphModel({ text: 'The quick brown fox jumped over the lazy dog.' });
+    var p = new MediumEditor.BlockModel({ text: 'The quick brown fox jumped over the lazy dog.' });
     this.children.add(p);
-    p = new MediumEditor.DividerModel();
+    p = new MediumEditor.BlockModel({ type: 'divider' });
     this.children.add(p);
-    p = new MediumEditor.ParagraphModel({ text: 'Lazy wizards brew something something queen.' });
+    p = new MediumEditor.BlockModel({ text: 'Lazy wizards brew something something queen.' });
     this.children.add(p);
   },
   html: function() {
@@ -66,7 +66,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       }
     }
 
-    var newParagraph = new MediumEditor.ParagraphModel({ text: remainderText });
+    var newParagraph = new MediumEditor.BlockModel({ text: remainderText });
     this.children.insertAt(newParagraph, selection.startIx + 1);
 
 
@@ -101,4 +101,8 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     // enter on an empty list item
     //   in the middle of a list?
   },
+  changeBlockType: function(selection, newType) {
+    var block = this.children.at(selection.startIx);
+    block.changeType(newType);
+  }
 });

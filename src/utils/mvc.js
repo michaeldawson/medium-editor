@@ -120,6 +120,9 @@ MediumEditor.Collection = MediumEditor.MVC.extend({
     var item = this.at(ix);
     this.items.splice(ix, 1);
     this.trigger('remove', item, ix);
+  },
+  clear: function() {
+    this.items = [];
   }
 });
 
