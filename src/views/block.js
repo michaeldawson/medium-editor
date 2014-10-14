@@ -7,7 +7,7 @@ MediumEditor.BlockView = MediumEditor.View.extend({
     this._super(attrs);
 
     // Create the block view element
-    this.el = document.createElement(this.model.tag());
+    this.el = this._createElement();
 
     // Listen for changes
     this.on('changed', this.model, this._onChanged.bind(this));
@@ -15,6 +15,14 @@ MediumEditor.BlockView = MediumEditor.View.extend({
 
     // Do an initial render
     this._render();
+  },
+
+  _createElement: function() {
+    var el = document.createElement(this.model.tag());
+    if (this.model.type == 'image' || this.model.type == 'divider') {
+      el.contentEditable = false;
+    }
+    return el;
   },
 
   _onChanged: function() {
@@ -26,7 +34,7 @@ MediumEditor.BlockView = MediumEditor.View.extend({
   },
 
   _onTypeChanged: function() {
-    var newEl = document.createElement(this.model.tag());
+    var newEl = this._createElement();
     newEl.innerHTML = this.model.innerHTML();
     this.el.parentNode.replaceChild(newEl, this.el);
   }

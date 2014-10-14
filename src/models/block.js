@@ -12,6 +12,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     this.parent = attrs['parent'];       // Refers to the document model this block belongs to
     this.type = attrs['type'] || 'paragraph';
     this.text = attrs['text'] || '';
+    this.src = attrs['src'] || '';
     this.markups = new MediumEditor.MarkupCollection();
     this.on('add', this.markups, this._onMarkupAdded.bind(this));
   },
@@ -24,11 +25,14 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       this.trigger('changed');
     }
   },
-  changeType: function(newType) {
+  changeType: function(newType, attrs) {
     if (this.type == newType) return;
     this.markups.clear();
     if (newType != 'paragraph' && newType != 'quote' && newType != 'heading') {
       this.text = '';
+    }
+    if (newType == 'image') {
+      this.src = attrs['src'];
     }
     this.type = newType;
     this.trigger('typechanged');
@@ -41,23 +45,27 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       case 'divider': return 'hr';
       case 'unordered_list': return 'ul';
       case 'ordered_list': return 'ol';
-      case 'image': return 'img';
+      case 'image': return 'figure';
       case 'video': return 'video';
     }
   },
   innerHTML: function() {
-    var toReturn = this.markups.apply(this.text) || '<br>';
-    toReturn = toReturn.replace(/\s{2}/g,' &nbsp;')     // Consecutive spaces should be compressed to a space + nbsp
-                       .replace(/^ /,'&nbsp;')          // Leading spaces should be nbsp
-                       .replace(/ $/,'&nbsp;')          // Trailing spaces should be nbsp
-    if (this.type == 'ordered_list' || this.type == 'unordered_list') {
-      var items = toReturn.split("\n");
-      toReturn = '';
-      for(var i = 0; i < items.length; i++) {
-        toReturn += '<li>' + items[i] + '</li>'
+    if (this.type == 'image') {
+      return '<img src="' + this.src + '">';
+    } else {
+      var toReturn = this.markups.apply(this.text) || '<br>';
+      toReturn = toReturn.replace(/\s{2}/g,' &nbsp;')     // Consecutive spaces should be compressed to a space + nbsp
+                         .replace(/^ /,'&nbsp;')          // Leading spaces should be nbsp
+                         .replace(/ $/,'&nbsp;')          // Trailing spaces should be nbsp
+      if (this.type == 'ordered_list' || this.type == 'unordered_list') {
+        var items = toReturn.split("\n");
+        toReturn = '';
+        for(var i = 0; i < items.length; i++) {
+          toReturn += '<li>' + items[i] + '</li>'
+        }
       }
+      return toReturn;
     }
-    return toReturn;
   },
   html: function() {
     return '<' + this.tag() + '>' + this.innerHTML() + '</' + this.tag() + '>';

@@ -22,8 +22,21 @@
   word-wrap: break-word;
 }
 
+.medium-editor-document p,
+.medium-editor-document blockquote,
+.medium-editor-document ul,
+.medium-editor-document ol,
+.medium-editor-document figure {
+  margin-bottom: 30px;
+}
+
+.medium-editor-document figure {
+  text-align: center;
+}
+
 .medium-editor-document hr {
-  color: transparent;   // Prevents the cursor from showing
+  margin-top: 30px;
+  margin-bottom: 30px;
 }
 
 .medium-editor-highlight-menu {

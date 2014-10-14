@@ -65,7 +65,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     var action = e.currentTarget.getAttribute('data-action');
     switch(action) {
       case 'image':
-
+        this._insertImage();
         break;
       case 'video':
 
@@ -75,6 +75,41 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
         this.editorView._refreshSelection();
         break;
     }
+  },
+  // Insert an image, replacing the current
+  // block.
+  _insertImage: function() {
+
+    // Create a hidden file input
+    var fileInput = document.createElement('input');
+    fileInput.type = 'file';
+
+    // When the value changes (the user selects a
+    // file or cancels the dialog)
+    this.on('change', fileInput, (function(e) {
+
+      // If they selected a file ...
+      if (fileInput.files && fileInput.files[0]) {
+
+        // Read the file
+        var reader = new FileReader();
+        reader.onload = (function(e) {
+
+          // Replace the current block with a figure
+          // containing the image, then give it
+          // focus
+          this.model.changeBlockType(this.editorView.selection, 'image', { src: e.target.result });
+
+        }).bind(this);
+        reader.readAsDataURL(fileInput.files[0]);
+      }
+
+    }).bind(this));
+
+    // Simulate a click so the dialog opens
+    var ev = document.createEvent('Events');
+    ev.initEvent('click', true, false);
+    fileInput.dispatchEvent(ev);
   },
   _onSelectionChanged: function(selection) {
     this._position(selection);

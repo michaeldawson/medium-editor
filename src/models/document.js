@@ -101,8 +101,8 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     // enter on an empty list item
     //   in the middle of a list?
   },
-  changeBlockType: function(selection, newType) {
+  changeBlockType: function(selection, newType, attrs) {
     var block = this.children.at(selection.startIx);
-    block.changeType(newType);
+    block.changeType(newType, attrs);
   }
 });

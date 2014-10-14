@@ -35,9 +35,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // Listen for any events which may modify the
     // selection. This view is ultimately responsible
     // for the selection object, including triggering
-    // events for other views to listen to and
-    // ensuring the selection is valid (e.g.
-    // preventing selection on a divider).
+    // events for other views to listen to.
     //
     // Note, we listen to the document view element
     // because there may be keydown events in the
@@ -57,46 +55,6 @@ MediumEditor.EditorView = MediumEditor.View.extend({
 
   _onKeyDown: function(e) {
     switch (e.which) {
-      case 37:    // Left arrow
-      case 38:    // Up arrow
-      case 39:    // Right arrow
-      case 40:    // Down arrow
-
-        // If an arrow key would put the selection on a
-        // divider, cancel it and try to move it to the
-        // next appropriate selectable block instead.
-
-        var direction = e.which <= 38 ? -1 : 1;     // +1 for down, -1 for up
-
-        // Ignore if we're going left and not at offset
-        // 0, or going right and not at the end of the
-        // block.
-        if (e.which == 37 && this.selection.startOffset > 0) return;
-        if (e.which == 39 && this.selection.endOffset < this.selection.endBlock.text.length) return;
-
-        // Ignore if we're going up but we're already
-        // on the first block, or going down and we're
-        // already on the last block.
-        if (direction < 0 && this.selection.startIx == 0) return;
-        if (direction > 0 && this.selection.endIx == this.model.children.size() - 1) return;
-
-        // Determine the block we're attempting to move
-        // to.
-        var ix = (direction < 0 ? this.selection.startIx : this.selection.endIx) + direction;
-        var targetBlock = this.model.children.at(ix);
-
-        // Is it a divider?
-        if (targetBlock.type == 'divider') {
-
-          // Prevent the action
-          e.preventDefault();
-
-          // Try to find a selectable block instead
-          var newIx = (direction < 0 ? this._findPrevSelectableBlock(ix, true) : this._findNextSelectableBlock(ix, true));
-          this._setSelection(newIx, e.which == 37 ? this.model.children.at(newIx).text.length : 0);
-        }
-
-        break;
 
       case 77:
         if (!e.ctrlKey) break;
@@ -257,18 +215,6 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       return;
     }
 
-    // The selection/cursor is within the document
-    // element itself, instead of one of the
-    // blocks. Usually means they've clicked on
-    // an unselectable element, like a HR. Use the
-    // offset to determine a more appropriate
-    // selection position.
-    if (startNode == this.documentView.el) {
-      var newIx = this._findNextSelectableBlock(startOffset, true);
-      this._setSelection(newIx, 0);
-      return;
-    }
-
     // Determine the start and end indices, in the
     // context of the document blocks.
     var startElement = this._blockElementFromNode(startNode);
@@ -294,22 +240,6 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       endOffset:    endOffset,
       rectangle:    rectangle
     });
-  },
-
-  _findNextSelectableBlock: function(ix, tryPrev) {
-    for(var i = ix; i < this.model.children.size(); i++) {
-      var block = this.model.children.at(i);
-      if (!(block.type == 'divider')) return i;
-    }
-    return tryPrev ? this._findPrevSelectableBlock(ix, false) : null;
-  },
-
-  _findPrevSelectableBlock: function(ix, tryNext) {
-    for(var i = ix; i >= 0; i--) {
-      var block = this.model.children.at(i);
-      if (!(block.type == 'divider')) return i;
-    }
-    return tryNext ? this._findNextSelectableBlock(ix, false) : null;
   },
 
   // Helper function. We express our caret and
