@@ -12,11 +12,19 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.parse(attrs['html'] || '');
 
     // TODO - temporary
-    var p = new MediumEditor.BlockModel({ text: 'The quick brown fox jumped over the lazy dog.' });
+    var p = new MediumEditor.BlockModel({ text: "Medium Editor Demo", type: 'h1' });
     this.children.add(p);
-    p = new MediumEditor.BlockModel({ type: 'divider' });
+    p = new MediumEditor.BlockModel({ text: "One of the most significant scenes in journalist Erik Parker and director One9’s new documentary captures Nas’ younger brother Jungle, as he is shown a picture from the disc sleeve of Illmatic, his older sibling’s supremely perfect, undeniably classic 1994 hip-hop album. The photo features Nas surrounded by friends, posed in the Queensbridge Projects. Jungle proceeds to run down where everyone is today, reeling off what seems an impossible list of misfortunes." });
     this.children.add(p);
-    p = new MediumEditor.BlockModel({ text: 'Lazy wizards brew something something queen.' });
+    p = new MediumEditor.BlockModel({ text: "“Some of them people gonna catch murders, some of them people gonna get beat up, some of them people gonna go to jail, but all them people gonna have a story,” Jungle says as he points out each person in the photo, some of them children when it was taken. “He’s doing 15 years. He’s fighting a murder. He’s doing life in prison. He just got locked up, no bail. He just did a shit load of time in North Carolina, bricks, crazy ass life. He do a bunch of fucking time, in and out of jail. This shit is real, this the projects.”" });
+    this.children.add(p);
+    p = new MediumEditor.BlockModel({ text: "The meaning begins to sink in: Nas is the only person who rose above the perils of these projects to become a legendary hip-hop figure. Nas is then shown in a more recent setting, watching film of Jungle listing the fate of each person in the photo. As the camera lingers on the stoic rapper for an uncomfortably long period, eventually his hard stare softens and he visibly struggles to muster, “that’s fucked up,” as Jungle concludes his story." });
+    this.children.add(p);
+    p = new MediumEditor.BlockModel({ text: "“Those emotions you see from Nas are very sincere,” said One9. “Those are his friends and peers that he grew up with. To hear it firsthand from his brother exactly how many years they were doing or where they are now was devastating for him to see. He allowed us that access to capture that unfiltered emotion.”" });
+    this.children.add(p);
+    p = new MediumEditor.BlockModel({ src: 'https://d262ilb51hltx0.cloudfront.net/max/2000/1*BtS_9bvMh9xlWnyQ3TO4xA.jpeg', caption: 'Nas at the Tribeca Film Festival, 2014', type: 'image' });
+    this.children.add(p);
+    p = new MediumEditor.BlockModel({ text: "In the eyes of many, Nasir Jones accomplished everything he had set out to do with his 1994 debut album. Now celebrating 20 years since its release, the set has become required listening for any individual that claims to be part of hip-hop culture. From its intriguing title to its meticulous sequencing, Illmatic is the yardstick that all rap albums are measured against. Nas’ inner-city version of Shakespearian lyricism was inspired by the poetry of Rakim, molded into a new language art. Illmatic has not only aged like fine wine, but it is the very grape that all wines are manufactured from." });
     this.children.add(p);
   },
   html: function() {
@@ -29,11 +37,11 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
 
   markup: function(selection, markupKlass) {
-    if (!(selection instanceof MediumEditor.RangeSelection)) return;
-    for(var i = selection.startBlockIx; i <= selection.endBlockIx; i++) {
+    if (selection.type != 'range') return;
+    for(var i = selection.startIx; i <= selection.endIx; i++) {
       var block = this.children.at(i);
-      var start = i == selection.startBlockIx ? selection.startOffset : 0;
-      var end = i == selection.endBlockIx ? selection.endOffset : block.text.length;
+      var start = i == selection.startIx ? selection.startOffset : 0;
+      var end = i == selection.endIx ? selection.endOffset : block.text.length;
       block.markups.add(new markupKlass({ start: start, end: end }));
     }
   },

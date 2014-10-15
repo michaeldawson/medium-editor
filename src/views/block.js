@@ -31,6 +31,10 @@ MediumEditor.BlockView = MediumEditor.View.extend({
 
   _render: function() {
     this.el.innerHTML = this.model.innerHTML();
+    var caption = this.el.getElementsByTagName('figcaption')[0];
+    if (caption) {
+      caption.contentEditable = true;
+    }
   },
 
   _onTypeChanged: function() {

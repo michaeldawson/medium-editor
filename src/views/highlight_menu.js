@@ -7,7 +7,9 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   BUTTONS: {
     'strong':         '<i class="glyphicon glyphicon-bold"></i>',
     'emphasis':       '<i class="glyphicon glyphicon-italic"></i>',
-    'heading':        '<i class="glyphicon glyphicon-header"></i>',
+    'h1':             'H1',
+    'h2':             'H2',
+    'h3':             'H3',
     'quote':          '<i class="glyphicon fa fa-quote-right"></i>',
     'anchor':         '<i class="glyphicon glyphicon-link"></i>'
   },
@@ -43,12 +45,18 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action');
     switch(action) {
-      case 'quote':
-        this.model.changeBlockType(this.editorView.selection, 'quote');
+      case 'strong':
+        this.model.markup(this.editorView.selection, MediumEditor.StrongModel);
         break;
-      case 'heading':
-        this.model.changeBlockType(this.editorView.selection, 'heading');
-        break;  
+      case 'emphasis':
+        this.model.markup(this.editorView.selection, MediumEditor.EmphasisModel);
+        break;
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'quote':
+        this.model.changeBlockType(this.editorView.selection, action);
+        break;
     }
   },
   _onSelectionChanged: function(selection) {
@@ -75,7 +83,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
       // Calculate x and y
       var x = (right + left - highlightMenuWidth) / 2.0;
-      var y = top - highlightMenuHeight + document.body.scrollTop;
+      var y = top - highlightMenuHeight;
 
       // Clamp to the editor
       x = Math.min(Math.max(x, 0), editorRect.width - highlightMenuWidth);

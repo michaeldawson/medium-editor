@@ -125,6 +125,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
         var editorRect = this.editorView.el.getBoundingClientRect();      // Convert to editor space
         var top = rect.top - editorRect.top;
         this.el.style.top = top + 'px';
+        this.el.style.left = '50px';
 
         this.el.className = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME].join(' ');
 

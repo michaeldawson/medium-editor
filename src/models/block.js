@@ -13,6 +13,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     this.type = attrs['type'] || 'paragraph';
     this.text = attrs['text'] || '';
     this.src = attrs['src'] || '';
+    this.caption = attrs['caption'] || '';
     this.markups = new MediumEditor.MarkupCollection();
     this.on('add', this.markups, this._onMarkupAdded.bind(this));
   },
@@ -28,7 +29,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   changeType: function(newType, attrs) {
     if (this.type == newType) return;
     this.markups.clear();
-    if (newType != 'paragraph' && newType != 'quote' && newType != 'heading') {
+    if (newType != 'paragraph' && newType != 'quote' && newType != 'h1' && newType != 'h2' && newType != 'h3') {
       this.text = '';
     }
     if (newType == 'image') {
@@ -40,7 +41,9 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   tag: function() {
     switch(this.type) {
       case 'paragraph': return 'p';
-      case 'heading': return 'h3';
+      case 'h1': return 'h2';
+      case 'h2': return 'h3';
+      case 'h3': return 'h4';
       case 'quote': return 'blockquote';
       case 'divider': return 'hr';
       case 'unordered_list': return 'ul';
@@ -51,7 +54,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   },
   innerHTML: function() {
     if (this.type == 'image') {
-      return '<img src="' + this.src + '">';
+      return '<img src="' + this.src + '">' + (this.caption ? '<figcaption>' + this.caption + '</figcaption>' : '');
     } else {
       var toReturn = this.markups.apply(this.text) || '<br>';
       toReturn = toReturn.replace(/\s{2}/g,' &nbsp;')     // Consecutive spaces should be compressed to a space + nbsp

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Medium Editor Demo</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-    <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic|Open+Sans:300,700' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="medium-editor.css">
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -38,18 +38,10 @@
 
   </head>
   <body>
-    <div class='container'>
-      <div class='row'>
-        <div class='col-md-8 col-md-8 col-md-offset-2'>
-          <h1>Demo</h1>
-          <form>
-            <textarea id='medium-editor'>
-            </textarea>
-          </form>
-        </div>
-      </div>
-    </div>
-
+    <form>
+      <textarea id='medium-editor'>
+      </textarea>
+    </form>
     <script type='text/javascript'>
       var editor = new MediumEditor('#medium-editor');
     </script>

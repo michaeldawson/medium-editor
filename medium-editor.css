@@ -10,7 +10,6 @@
 
 .medium-editor-document p,
 .medium-editor-document blockquote,
-.medium-editor-document h3,
 .medium-editor-document li {
   font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
   letter-spacing: .01rem;
@@ -22,18 +21,66 @@
   word-wrap: break-word;
 }
 
+.medium-editor-document h2,
+.medium-editor-document h3,
+.medium-editor-document h4 {
+  font-family: 'Open Sans', sans-serif;
+  font-style: normal;
+}
+.medium-editor-document h2,
+.medium-editor-document h3 {
+  font-weight: 700;
+}
+.medium-editor-document h2 {
+  font-size: 60px;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  letter-spacing: -0.04em;
+  margin-left: -3px;
+  padding-top: 0;
+  line-height: 1;
+}
+.medium-editor-document h3 {
+  font-size: 36px;
+  letter-spacing: -0.02em;
+  line-height: 1.2em;
+  margin-bottom: 15px;
+  margin-top: 40px;
+  margin-left: -1.8px;
+}
+.medium-editor-document h4 {
+  font-weight: 300;
+  font-size: 30px;
+  color: rgba(0,0,0,0.44);
+  letter-spacing: -0.02em;
+  margin-left: -1.5px;
+  line-height: 1.2em;
+  margin-bottom: 15px;
+  margin-top: 40px;
+}
+
 .medium-editor-document strong {
   font-weight: 700;
 }
 
 .medium-editor-document p,
 .medium-editor-document blockquote,
-.medium-editor-document h3,
 .medium-editor-document ul,
-.medium-editor-document ol,
-.medium-editor-document figure {
+.medium-editor-document ol {
   margin-bottom: 30px;
   margin-top: 0;
+}
+
+.medium-editor-document p,
+.medium-editor-document blockquote,
+.medium-editor-document h2,
+.medium-editor-document h3,
+.medium-editor-document h4,
+.medium-editor-document ul,
+.medium-editor-document ol {
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .medium-editor-document blockquote {
@@ -46,26 +93,32 @@
 .medium-editor-document blockquote em {
   font-style: normal;
 }
-
-.medium-editor-document h3 {
-  font-family: sans-serif;
-  margin-bottom: 20px;
-  color: rgba(0,0,0,0.44);
-  font-size: 28px;
-  line-height: 1.2em;
-  font-weight: 300;
-  letter-spacing: normal;
-}
-
 .medium-editor-document li {
   margin-bottom: 12px;
 }
 
 .medium-editor-document figure {
   text-align: center;
+  margin: 60px 0;
 }
 .medium-editor-document figure img {
   max-width: 100%;
+}
+.medium-editor-document figure figcaption {
+  font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
+  letter-spacing: .01rem;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.4em;
+  color: rgba(0,0,0,0.6);
+  word-wrap: break-word;
+  margin-top: 15px;
+}
+.medium-editor-document figure figcaption:focus {
+  outline: none;
+  -moz-outline: none;
+  -webkit-outline: none;
 }
 
 .medium-editor-document hr {
