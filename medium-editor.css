@@ -167,6 +167,8 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   border: none;
+  font-size: 16px;
+  cursor: pointer;
   font-family: 'Merriweather',Georgia,Cambria,"Times New Roman",Times,serif;
 }
 .medium-editor-highlight-menu button:hover,

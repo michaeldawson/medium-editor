@@ -5,13 +5,13 @@
 MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   BUTTONS: {
-    'strong':         '<i class="glyphicon glyphicon-bold"></i>',
-    'emphasis':       '<i class="glyphicon glyphicon-italic"></i>',
+    'strong':         '<i class="fa fa-bold"></i>',
+    'emphasis':       '<i class="fa fa-italic"></i>',
     'h1':             'H1',
     'h2':             'H2',
     'h3':             'H3',
-    'quote':          '<i class="glyphicon fa fa-quote-right"></i>',
-    'anchor':         '<i class="glyphicon glyphicon-link"></i>'
+    'quote':          '<i class="fa fa-quote-right"></i>',
+    'anchor':         '<i class="fa fa-link"></i>'
   },
 
   init: function(attrs) {
