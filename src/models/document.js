@@ -12,7 +12,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.parse(attrs['html'] || '');
 
     // TODO - temporary
-    var p = new MediumEditor.BlockModel({ text: "Medium Editor Demo", type: 'h1' });
+    var p = new MediumEditor.BlockModel({ text: "Medium Editor Demo", type: 'heading1' });
     this.children.add(p);
     p = new MediumEditor.BlockModel({ text: "One of the most significant scenes in journalist Erik Parker and director One9’s new documentary captures Nas’ younger brother Jungle, as he is shown a picture from the disc sleeve of Illmatic, his older sibling’s supremely perfect, undeniably classic 1994 hip-hop album. The photo features Nas surrounded by friends, posed in the Queensbridge Projects. Jungle proceeds to run down where everyone is today, reeling off what seems an impossible list of misfortunes." });
     this.children.add(p);

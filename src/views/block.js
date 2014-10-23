@@ -12,15 +12,16 @@ MediumEditor.BlockView = MediumEditor.View.extend({
     // Listen for changes
     this.on('changed', this.model, this._onChanged.bind(this));
     this.on('typechanged', this.model, this._onTypeChanged.bind(this));
-
-    // Do an initial render
-    this._render();
   },
 
   _createElement: function() {
-    var el = document.createElement(this.model.tag());
-    if (this.model.type == 'image' || this.model.type == 'divider') {
-      el.contentEditable = false;
+    var el = document.createElement('div');
+    el.innerHTML = this.model.html();
+    el = el.firstChild;
+    if (this.model.type() == MediumEditor.BlockModel.prototype.TYPES.IMAGE ||
+        this.model.type() == MediumEditor.BlockModel.prototype.TYPES.VIDEO ||
+        this.model.type() == MediumEditor.BlockModel.prototype.TYPES.DIVIDER) {
+        el.contentEditable = false;
     }
     return el;
   },
@@ -31,15 +32,10 @@ MediumEditor.BlockView = MediumEditor.View.extend({
 
   _render: function() {
     this.el.innerHTML = this.model.innerHTML();
-    var caption = this.el.getElementsByTagName('figcaption')[0];
-    if (caption) {
-      caption.contentEditable = true;
-    }
   },
 
   _onTypeChanged: function() {
     var newEl = this._createElement();
-    newEl.innerHTML = this.model.innerHTML();
     this.el.parentNode.replaceChild(newEl, this.el);
   }
 });

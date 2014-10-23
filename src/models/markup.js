@@ -30,6 +30,14 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   },
 
   // ---------------------------------------------
+  //  Accessors
+  // ---------------------------------------------
+
+  type: function() {
+    return this._type;
+  },
+
+  // ---------------------------------------------
   //  Instance Methods
   // ---------------------------------------------
 
@@ -38,17 +46,19 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   wrap: function(html) {
 
     // Grab the tag, based on the type
-    var tag = {
-      MediumEditor.BlockModel.TYPES.STRONG:     'strong',
-      MediumEditor.BlockModel.TYPES.EMPHASIS:   'em',
-      MediumEditor.BlockModel.TYPES.ANCHOR:     'a'
-    }[this._type];
+    var tag;
+    switch(this._type) {
+      case this.TYPES.STRONG:     tag = 'strong'; break;
+      case this.TYPES.EMPHASIS:   tag = 'em'; break;
+      case this.TYPES.ANCHOR:     tag = 'a'; break;
+    }
 
     // Create the opening tag. For anchor, this
     // will include the href attribute.
     var openingTag = "<" + tag;
-    if (this._type == )
-    return "<" + tag + ">" + html + "</" + tag + ">";
+    if (this._type == this.TYPES.ANCHOR) openingTag += " href='" + this._href + "'";
+    openingTag += ">";
+    return openingTag + html + "</" + tag + ">";
   },
 
   // Does this markup touch another?
@@ -59,7 +69,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   // Does this markup cover another?
   covers: function(other) {
     return this._start <= other._start && this._end >= other._end;
-  }
+  },
 
   // ---------------------------------------------
   //  Utilities
@@ -70,7 +80,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   // appropriate for the type (e.g. href on a
   // strong markup)
   _setAttributes: function(attrs) {
-    this._type = MediumEditor.MarkupModel.TYPES[attrs['type'].toUpperCase()] || MediumEditor.MarkupModel.TYPES.STRONG;
+    this._type = this.TYPES[(attrs['type'] || 'STRONG').toUpperCase()];
     this._start = attrs['start'] || 0;
     this._end = attrs['end'] || 0;
     this._href = !this._isAnchor() ? null : (attrs['href'] || '');
@@ -91,7 +101,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   },
 
   _isAnchor: function() {
-    return this._type == MediumEditor.MarkupModel.TYPES.ANCHOR;
+    return this._type == this.TYPES.ANCHOR;
   }
 
 });
