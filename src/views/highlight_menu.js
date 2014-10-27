@@ -16,7 +16,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.editorView = attrs['editorView'];
+    this.selection = attrs['selection'];
 
     // Create the element
     this.el = document.createElement('div');
@@ -40,36 +40,36 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', this.editorView.selection, this._onSelectionChanged.bind(this));
+    this.on('changed', this.selection, this._onSelectionChanged.bind(this));
   },
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action');
     switch(action) {
       case 'strong':
-        this.model.markup(this.editorView.selection, MediumEditor.StrongModel);
+        this.selection.markup(MediumEditor.MarkupModel.prototype.TYPES.STRONG);
         break;
       case 'emphasis':
-        this.model.markup(this.editorView.selection, MediumEditor.EmphasisModel);
+        this.selection.markup(MediumEditor.MarkupModel.prototype.TYPES.EMPHASIS);
         break;
       case 'h1':
+        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING1);
+        break;
       case 'h2':
+        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING2);
+        break;
       case 'h3':
+        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING3);
+        break;
       case 'quote':
-        this.model.changeBlockType(this.editorView.selection, action);
+        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.QUOTE);
         break;
     }
   },
-  _onSelectionChanged: function(selection) {
-    this._position(selection);
+  _onSelectionChanged: function() {
+    this._position();
   },
-  _position: function(selection) {
-    if (selection.type == 'range') {
-      var rect = selection.rectangle;
-
-      // Convert to editor space
-      var editorRect = this.editorView.el.getBoundingClientRect();
-      var top = rect.top - editorRect.top; var bottom = rect.bottom - editorRect.top;
-      var left = rect.left - editorRect.left; var right = rect.right - editorRect.left;
+  _position: function() {
+    if (this.selection.isRange()) {
 
       // Measure the highlight menu itself by creating
       // an invisible clone
@@ -82,12 +82,9 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
       clone.parentNode.removeChild(clone);
 
       // Calculate x and y
-      var x = (right + left - highlightMenuWidth) / 2.0;
-      var y = top - highlightMenuHeight;
-
-      // Clamp to the editor
-      x = Math.min(Math.max(x, 0), editorRect.width - highlightMenuWidth);
-      y = Math.min(y, editorRect.height - highlightMenuHeight);
+      var rect = this.selection.rectangle();
+      var x = (rect.right + rect.left - highlightMenuWidth) / 2.0;
+      var y = rect.top - highlightMenuHeight;
 
       // Set position and make visible
       this.el.style.left = x + 'px';

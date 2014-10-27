@@ -22,7 +22,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.editorView = attrs['editorView'];
+    this.selection = attrs['selection'];
 
     // Create the element
     this.el = document.createElement('div');
@@ -52,7 +52,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', this.editorView.selection, this._onSelectionChanged.bind(this));
+    this.on('changed', this.selection, this._onSelectionChanged.bind(this));
   },
   _onToggle: function() {
     var baseClasses = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME];
@@ -71,8 +71,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
         break;
       case 'divider':
-        this.model.changeBlockType(this.editorView.selection, 'divider');
-        this.editorView._refreshSelection();
+        this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.DIVIDER);
         break;
     }
   },
@@ -98,7 +97,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
           // Replace the current block with a figure
           // containing the image, then give it
           // focus
-          this.model.changeBlockType(this.editorView.selection, 'image', { src: e.target.result });
+          this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.IMAGE, { src: e.target.result });
 
         }).bind(this);
         reader.readAsDataURL(fileInput.files[0]);
@@ -111,13 +110,13 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     ev.initEvent('click', true, false);
     fileInput.dispatchEvent(ev);
   },
-  _onSelectionChanged: function(selection) {
-    this._position(selection);
+  _onSelectionChanged: function() {
+    this._position();
   },
-  _position: function(selection) {
-    if (selection.type == 'caret' &&                                      // If it's a caret selection ...
-        selection.startBlock.type == 'paragraph' &&                       // ... and we're on a paragraph ...
-        selection.startBlock.text == '') {                                // ... and it's blank ...
+  _position: function() {
+    if (this.selection.type == MediumEditor.Selection.prototype.TYPES.CARET &&                  // If it's a caret selection ...
+        this.selection.startModel.type == MediumEditor.BlockModel.prototype.TYPES.PARAGRAPH &&  // ... and we're on a paragraph ...
+        this.selection.startModel.text == '') {                                                 // ... and it's blank ...
 
         // Position and show the element
         var selectionEl = this.editorView.documentView.el.childNodes[selection.startIx];

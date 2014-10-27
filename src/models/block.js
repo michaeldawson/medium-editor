@@ -141,15 +141,15 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   // ---------------------------------------------
 
   setText: function(text) {
-    if (this.text != text) {
-      this.text = text;
+    if (this._text != text) {
+      this._text = text;
       this.trigger('changed');
     }
   },
 
-  setCaption: function(text) {
-    if (this.caption != caption) {
-      this.caption = caption;
+  setCaption: function(caption) {
+    if (this._caption != caption) {
+      this._caption = caption;
       this.trigger('changed');
     }
   },
@@ -181,12 +181,49 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   // appropriate for the type (e.g. src on a
   // paragraph element)
   _setAttributes: function(attrs) {
-    this._type = this.TYPES[(attrs['type'] || 'PARAGRAPH').toUpperCase()];
-    this._text = !this._isTextType() ? null : (attrs['text'] || '');
-    this._markups = !this._isTextType() ? null : new MediumEditor.MarkupCollection();
-    this._src = !this._isMediaType() ? null : (attrs['src'] || '');
-    this._caption = !this._isMediaType() ? null : (attrs['caption'] || '');
-    this._layout = !this._isMediaType() ? null : (attrs['layout'] || '');
+    if (attrs.hasOwnProperty('html')) {
+      this._parse(attrs['html']);
+    } else {
+      this._type = this.TYPES[(attrs['type'] || 'PARAGRAPH').toUpperCase()];
+      this._text = !this._isTextType() ? null : (attrs['text'] || '');
+      this._markups = !this._isTextType() ? null : new MediumEditor.MarkupCollection();
+      this._src = !this._isMediaType() ? null : (attrs['src'] || '');
+      this._caption = !this._isMediaType() ? null : (attrs['caption'] || '');
+      this._layout = !this._isMediaType() ? null : (attrs['layout'] || '');
+    }
+  },
+
+  // Parse a HTML string and determine type,
+  // content and markup.
+  _parse: function(htmlStr) {
+
+    // Create a DOM representation of the string
+    var el = document.createElement('div');
+    el.innerHTML = (htmlStr || '').trim();
+    el = el.firstChild;
+
+    // Determine the type from the tag name
+    var attrs = { text: el.innerText };
+    var tagName = el.tagName.toLowerCase();
+    switch(tagName) {
+      case 'p':           attrs['type'] = 'PARAGRAPH'; break;
+      case 'blockquote':  attrs['type'] = 'QUOTE'; break;
+      case 'h2':          attrs['type'] = 'HEADING1'; break;
+      case 'h3':          attrs['type'] = 'HEADING2'; break;
+      case 'h4':          attrs['type'] = 'HEADING3'; break;
+      case 'hr':          attrs['type'] = 'DIVIDER'; break;
+      case 'figure':
+        attrs['type'] = el.children[0].tagName.toLowerCase() == 'img' ? 'IMAGE' : 'VIDEO';
+        attrs['src'] = el.children[0].src;
+        attrs['caption'] = el.children[1].innerText;
+        break;
+      case 'li':
+        // TODO
+        break;
+    }
+
+    // Set the attributes
+    this._setAttributes(attrs);
   },
 
   _isTextType: function() {

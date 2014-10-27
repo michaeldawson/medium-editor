@@ -3,6 +3,7 @@
 // ---------------------------------------------
 
 MediumEditor.BlockView = MediumEditor.View.extend({
+
   init: function(attrs) {
     this._super(attrs);
 
