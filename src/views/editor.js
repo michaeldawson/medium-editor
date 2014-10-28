@@ -69,8 +69,8 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         var ix = this._selection.model()._startIx;
         this._model.insertParagraph(this._selection.model());
         this._selection.model().set({
-          startIx: ix + 1,
-          startOffset: 0
+          startIx:      ix + 1,
+          startOffset:  0
         });
 
         e.preventDefault();
@@ -116,11 +116,20 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     if (e.which == 13 && !e.shiftKey) return;
 
     var text = this._selection.startBlockElement().innerText;
+    var ix = this._selection.model()._startIx;
 
     if (text.match(/^1\.\s/)) {
       this._model.changeBlockType('ORDERED_LIST_ITEM', this._selection.model());
+      this._selection.model().set({
+        startIx:      ix,
+        startOffset:  0
+      });
     } else if (text.match(/^\*\s/)) {
       this._model.changeBlockType('UNORDERED_LIST_ITEM', this._selection.model());
+      this._selection.model().set({
+        startIx:      ix,
+        startOffset:  0
+      });
     } else {
 
       if (text == "\n") text = '';     // Empty paragraphs

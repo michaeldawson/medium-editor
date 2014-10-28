@@ -71,18 +71,6 @@
   margin-top: 0;
 }
 
-.medium-editor-document p,
-.medium-editor-document blockquote,
-.medium-editor-document h2,
-.medium-editor-document h3,
-.medium-editor-document h4,
-.medium-editor-document ul,
-.medium-editor-document ol {
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
 .medium-editor-document blockquote {
   font-style: italic;
   border-left: 3px solid #60d778;
@@ -95,6 +83,15 @@
 }
 .medium-editor-document li {
   margin-bottom: 12px;
+  margin-left: 30px;
+  padding-top: 2px;
+}
+
+.medium-editor-document ol {
+  list-style: decimal;
+}
+.medium-editor-document ul {
+  list-style: disc;
 }
 
 .medium-editor-document figure {
@@ -126,6 +123,11 @@
   margin-bottom: 30px;
   max-width: 100px;
   border-top-color: rgba(0,0,0,0.15);
+}
+
+.medium-editor-document .layout-single-column {
+  max-width: 700px;
+  margin: 0 auto;
 }
 
 .medium-editor-highlight-menu {

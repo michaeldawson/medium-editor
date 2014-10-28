@@ -53,6 +53,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   insertParagraph: function(selection) {
 
     var remainderText = '';
+    var type = 'PARAGRAPH';
     for (var i = selection._startIx; i <= selection._endIx; i++) {
 
       var block = this._children.at(i);
@@ -73,13 +74,14 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       }
 
       if (i == selection._startIx) {
+        if (block.isListItem() && block.text() != '') type = block.isOrderedListItem() ? 'ORDERED_LIST_ITEM' : 'UNORDERED_LIST_ITEM';
         if (selection._startOffset < block.text().length) {
           block.setText(block.text().substring(0, selection._startOffset));
         }
       }
     }
 
-    var newParagraph = new MediumEditor.BlockModel({ text: remainderText });
+    var newParagraph = new MediumEditor.BlockModel({ text: remainderText, type: type });
     this._children.insertAt(newParagraph, selection._startIx + 1);
     this.trigger('changed');
   },

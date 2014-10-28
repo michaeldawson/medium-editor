@@ -217,7 +217,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       this._parse(attrs['html']);
     } else {
       this._type = this.TYPES[(attrs['type'] || 'PARAGRAPH').toUpperCase()];
-      this._text = !this.isText() ? null : (attrs['text'] || '');
+      this._text = !this.isText() ? null : ((this.isListItem() ? '' : attrs['text']) || '');
       this._markups = !this.isText() ? null : new MediumEditor.MarkupCollection();
       this._src = !this.isMedia() ? null : (attrs['src'] || '');
       this._caption = !this.isMedia() ? null : (attrs['caption'] || '');

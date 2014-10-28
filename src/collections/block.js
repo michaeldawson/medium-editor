@@ -22,7 +22,7 @@ MediumEditor.BlockCollection = MediumEditor.Collection.extend({
       // If this is the first item in a new layout, add
       // a tag to open it
       if (i == 0 || currentBlock.layout() != prevBlock.layout()) {
-        html += "<div class='" + (currentBlock.layout() || 'layoutSingleColumn') + "'>";
+        html += "<div class='" + (currentBlock.layout() || 'layout-single-column') + "'>";
       }
 
       // If this is the first item in a list, add the
