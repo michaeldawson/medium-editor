@@ -16,34 +16,34 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this._super(attrs);
 
     // Create the editor view element
-    this.el = document.createElement('div');
-    this.el.className = 'medium-editor';
+    this._el = document.createElement('div');
+    this._el.className = 'medium-editor';
 
     // Add a document view as a child
-    this.documentView = new MediumEditor.DocumentView({ model: this.model });
-    this.el.appendChild(this.documentView.el);
+    this._documentView = new MediumEditor.DocumentView({ model: this._model });
+    this._el.appendChild(this._documentView._el);
 
     // Create the selection. Some of the views need
     // this to subscribe to change events.
-    this.selection = new MediumEditor.Selection({ model: this.model, editorEl: this.el });
+    this._selection = new MediumEditor.SelectionView({ model: new MediumEditor.SelectionModel({}), documentView: this._documentView });
 
     // Create the highlight menu
-    this.highlightMenuView = new MediumEditor.HighlightMenuView({ model: this.model, selection: this.selection });
-    this.el.appendChild(this.highlightMenuView.el);
+    this._highlightMenuView = new MediumEditor.HighlightMenuView({ model: this._model, selection: this._selection });
+    this._el.appendChild(this._highlightMenuView._el);
 
     // Create the inline tooltip
-    this.inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this.model, selection: this.selection });
-    this.el.appendChild(this.inlineTooltipView.el);
+    this._inlineTooltipView = new MediumEditor.InlineTooltipView({ model: this._model, selection: this._selection });
+    this._el.appendChild(this._inlineTooltipView._el);
 
     // Listen for key events which we may want to
     // capture and handle differently and/or cancel
     // (such as enter).
-    this.on('keydown', this.documentView.el, this._onKeyDown.bind(this));
+    this.on('keydown', this._documentView._el, this._onKeyDown.bind(this));
 
     // Listen for key events which may have
     // modified the content and flush the changes
     // through the model.
-    this.on('keyup', this.documentView.el, this._onKeyUp.bind(this));
+    this.on('keyup', this._documentView._el, this._onKeyUp.bind(this));
   },
 
   // ---------------------------------------------
@@ -66,12 +66,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
 
         // Shift key isn't being pressed. Insert a new
         // paragraph at the current selection.
-        this.model.insertParagraph({
-          startIx:      this.selection.startIx,
-          startOffset:  this.selection.startOffset,
-          endIx:        this.selection.endIx,
-          endOffset:    this.selection.endOffset
-        });
+        this._model.insertParagraph(this._selection.model());
 
         e.preventDefault();
         break;
@@ -115,16 +110,16 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // TODO - not interested in the events covered in keydown, like enter etc
     // if (e.which == 13) return; - what about if shift is held down?
 
-    var text = this.selection.text();
+    var text = this._selection.startEl().innerText;
 
     if (text.match(/^1\.\s/)) {
-      this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.ORDERED_LIST_ITEM);
+      this._model.changeBlockType('ORDERED_LIST_ITEM', this._selection.model());
     } else if (text.match(/^\*\s/)) {
-      this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.UNORDERED_LIST_ITEM);
+      this._model.changeBlockType('UNORDERED_LIST_ITEM', this._selection.model());
     } else {
 
       if (text == "\n") text = '';     // Empty paragraphs
-      this.selection._startModel.setText(text);
+      this._model.setText(text, this._selection.model());
 
       // TODO: we need to determine the block(s) involved
       // (if any), map the DOM back to a model representation,

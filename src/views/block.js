@@ -1,42 +1,69 @@
 // ---------------------------------------------
 //  Block
 // ---------------------------------------------
+//  A view representing a block. Doesn't do
+//  anything interesting - just listens to
+//  changes in its model and renders them.
+// ---------------------------------------------
 
 MediumEditor.BlockView = MediumEditor.View.extend({
+
+  // ---------------------------------------------
+  //  Constructor
+  // ---------------------------------------------
 
   init: function(attrs) {
     this._super(attrs);
 
     // Create the block view element
-    this.el = this._createElement();
+    this._el = this._createElement();
 
     // Listen for changes
-    this.on('changed', this.model, this._onChanged.bind(this));
-    this.on('typechanged', this.model, this._onTypeChanged.bind(this));
+    this.on('changed', this._model, this._onChanged.bind(this));
+    this.on('typechanged', this._model, this._onTypeChanged.bind(this));
   },
 
-  _createElement: function() {
-    var el = document.createElement('div');
-    el.innerHTML = this.model.html();
-    el = el.firstChild;
-    if (this.model.type() == MediumEditor.BlockModel.prototype.TYPES.IMAGE ||
-        this.model.type() == MediumEditor.BlockModel.prototype.TYPES.VIDEO ||
-        this.model.type() == MediumEditor.BlockModel.prototype.TYPES.DIVIDER) {
-        el.contentEditable = false;
-    }
-    return el;
-  },
+  // ---------------------------------------------
+  //  Event Handlers
+  // ---------------------------------------------
 
   _onChanged: function() {
     this._render();
   },
 
-  _render: function() {
-    this.el.innerHTML = this.model.innerHTML();
+  _onTypeChanged: function() {
+
+    // The type of the block changed, so create a
+    // whole new element and replace the current
+    // element with it
+    var newEl = this._createElement();
+    this._el.parentNode.replaceChild(newEl, this._el);
   },
 
-  _onTypeChanged: function() {
-    var newEl = this._createElement();
-    this.el.parentNode.replaceChild(newEl, this.el);
+  // ---------------------------------------------
+  //  Utility Methods
+  // ---------------------------------------------
+
+  _createElement: function() {
+
+    // The model gives us a HTML string, so create
+    // a DOM representation of that
+    var el = document.createElement('div');
+    el.innerHTML = this._model.html();
+    el = el.firstChild;
+
+    // If this is an image, a video or a divider,
+    // disable content editing
+    if (this._model.isMedia() || this._model.isDivider()) {
+      el.contentEditable = false;
+    }
+
+    return el;
+  },
+
+  // Update the contents of the element
+  _render: function() {
+    this._el.innerHTML = this._model.innerHTML();
   }
+
 });

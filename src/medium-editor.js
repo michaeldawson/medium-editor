@@ -17,18 +17,18 @@ MediumEditor.prototype = {
 
     // Find the element - note we don't support
     // multiple elements at this time
-    this.el = document.querySelector(selector);
-    if (!this.el) return false;
-    this.el.style.display = 'none';
+    this._el = document.querySelector(selector);
+    if (!this._el) return false;
+    this._el.style.display = 'none';
 
     // Create the model
-    var startingHTML = this.el.innerHTML || '';
-    this.documentModel = new MediumEditor.DocumentModel({ html: startingHTML });
+    var startingHTML = this._el.innerHTML || '';
+    this._documentModel = new MediumEditor.DocumentModel({ html: startingHTML });
 
     // Create the editor view and insert it into
     // the page before the given element
-    this.editorView = new MediumEditor.EditorView({ model: this.documentModel });
-    this.el.parentNode.insertBefore(this.editorView.el, this.el);
+    this._editorView = new MediumEditor.EditorView({ model: this._documentModel });
+    this._el.parentNode.insertBefore(this._editorView._el, this._el);
   },
 
   // Check if the browser/device combination is

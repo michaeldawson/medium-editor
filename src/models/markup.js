@@ -11,7 +11,7 @@
 MediumEditor.MarkupModel = MediumEditor.Model.extend({
 
   // ---------------------------------------------
-  //  Supported markup types
+  //  Markup Types
   // ---------------------------------------------
 
   TYPES: {
@@ -33,12 +33,12 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   //  Accessors
   // ---------------------------------------------
 
-  type: function() {
-    return this._type;
+  isAnchor: function() {
+    return this._type == this.TYPES.ANCHOR;
   },
 
   // ---------------------------------------------
-  //  Instance Methods
+  //  Mutators
   // ---------------------------------------------
 
   // Given some HTML, wrap it in the appropriate
@@ -56,7 +56,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
     // Create the opening tag. For anchor, this
     // will include the href attribute.
     var openingTag = "<" + tag;
-    if (this._type == this.TYPES.ANCHOR) openingTag += " href='" + this._href + "'";
+    if (this.isAnchor()) openingTag += " href='" + this._href + "'";
     openingTag += ">";
     return openingTag + html + "</" + tag + ">";
   },
@@ -98,10 +98,6 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
     if (this._start == this._end) {
       throw 'Start and end points of markup must be separate';
     }
-  },
-
-  _isAnchor: function() {
-    return this._type == this.TYPES.ANCHOR;
   }
 
 });

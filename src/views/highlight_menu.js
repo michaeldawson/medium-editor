@@ -16,14 +16,14 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.selection = attrs['selection'];
+    this._selection = attrs['selection'];
 
     // Create the element
-    this.el = document.createElement('div');
-    this.el.className = 'medium-editor-highlight-menu';
+    this._el = document.createElement('div');
+    this._el.className = 'medium-editor-highlight-menu';
     var arrow = document.createElement('div');
     arrow.className = 'medium-editor-highlight-menu-arrow';
-    this.el.appendChild(arrow);
+    this._el.appendChild(arrow);
 
     // Create buttons
     for (var action in this.BUTTONS) {
@@ -34,34 +34,34 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
         button.innerHTML = html;
         button.setAttribute('data-action', action);
         this.on('mousedown touchstart', button, this._onButton.bind(this));
-        this.el.appendChild(button);
+        this._el.appendChild(button);
       }
     }
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', this.selection, this._onSelectionChanged.bind(this));
+    this.on('changed', this._selection.model(), this._onSelectionChanged.bind(this));
   },
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action');
     switch(action) {
       case 'strong':
-        this.selection.markup(MediumEditor.MarkupModel.prototype.TYPES.STRONG);
+        this._model.markup('STRONG', this._selection.model());
         break;
       case 'emphasis':
-        this.selection.markup(MediumEditor.MarkupModel.prototype.TYPES.EMPHASIS);
+        this._model.markup('EMPHASIS', this._selection.model());
         break;
       case 'h1':
-        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING1);
+        this._model.changeBlockType('HEADING1', this._selection.model());
         break;
       case 'h2':
-        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING2);
+        this._model.changeBlockType('HEADING2', this._selection.model());
         break;
       case 'h3':
-        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.HEADING3);
+        this._model.changeBlockType('HEADING3', this._selection.model());
         break;
       case 'quote':
-        this.selection.changeBlockType(MediumEditor.BlockModel.prototype.TYPES.QUOTE);
+        this._model.changeBlockType('QUOTE', this._selection.model());
         break;
     }
   },
@@ -69,29 +69,29 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     this._position();
   },
   _position: function() {
-    if (this.selection.isRange()) {
+    if (this._selection.model().isRange()) {
 
       // Measure the highlight menu itself by creating
       // an invisible clone
-      var clone = this.el.cloneNode(true);
+      var clone = this._el.cloneNode(true);
       clone.style.visibility = 'hidden';
-      this.el.parentNode.appendChild(clone);
+      this._el.parentNode.appendChild(clone);
       clone.className = 'medium-editor-highlight-menu medium-editor-highlight-menu-active';
       var highlightMenuWidth = clone.offsetWidth;
       var highlightMenuHeight = clone.offsetHeight;
       clone.parentNode.removeChild(clone);
 
       // Calculate x and y
-      var rect = this.selection.rectangle();
+      var rect = this._selection.rectangle();
       var x = (rect.right + rect.left - highlightMenuWidth) / 2.0;
       var y = rect.top - highlightMenuHeight;
 
       // Set position and make visible
-      this.el.style.left = x + 'px';
-      this.el.style.top = y + 'px';
-      this.el.className = 'medium-editor-highlight-menu medium-editor-highlight-menu-active';
+      this._el.style.left = x + 'px';
+      this._el.style.top = y + 'px';
+      this._el.className = 'medium-editor-highlight-menu medium-editor-highlight-menu-active';
     } else {
-      this.el.className = 'medium-editor-highlight-menu';
+      this._el.className = 'medium-editor-highlight-menu';
     }
   }
 });

@@ -1,55 +1,39 @@
 // ---------------------------------------------
 //  Selection
 // ---------------------------------------------
-//  Selection is a special case. It's not
-//  really a model (it has links to the block
-//  views, and the model of a document needs no
-//  concept of 'selection'), but it's also not
-//  a view (it has no DOM element, even though
-//  it's represented visually in the editor).
-//
-//  Instead, we model it as a utility class,
-//  extending the MVC base so it can still
-//  access the event helpers.
+//  The selection view. Doesn't actually have a
+//  DOM element - just contains all the logic
+//  for translating the selection model to/from
+//  the browser.
 // ---------------------------------------------
 
-MediumEditor.Selection = MediumEditor.MVC.extend({
-
-  // ---------------------------------------------
-  //  Permitted Selection Types
-  // ---------------------------------------------
-
-  TYPES: {
-    NULL:                 {},
-    CARET:                {},
-    RANGE:                {}
-  },
+MediumEditor.SelectionView = MediumEditor.View.extend({
 
   // ---------------------------------------------
   //  Constructor
   // ---------------------------------------------
 
   init: function(attrs) {
+    this._super(attrs);
 
-    // Should be passed the document model and the
-    // editor element
-    this._model = attrs['model'];
-    this._editorEl = attrs['editorEl'];
-    this._documentEl = this._editorEl.firstChild;
-
-    // Setup the attributes
-    this.null();
+    // Should be passed the document view
+    this._documentView = attrs['documentView'];
+    this._documentModel = this._documentView.model();
 
     // Listen for any events which may modify the
     // selection. Note, we listen to the document
     // element because there may be keyup events
     // in the highlight menu which are irrelevant.
-    this.on('keyup', this._documentEl, this._onKeyUp.bind(this));
-    this.on('mouseup', document, this._onMouseUp.bind(this));     // Listen to document in case the editor loses focus
+    this.on('keyup', this._documentView._el, this._onKeyUp.bind(this));
+    this.on('mouseup', document, this._onMouseUp.bind(this));           // Listen to document in case the editor loses focus
 
     // Listen for new blocks being added and give
     // them focus
-    this.on('add', this._model.children, this._onBlockAdded.bind(this));
+    this.on('add', this._documentModel.children(), this._onBlockAdded.bind(this));
+
+    // Listen for changes to the model and
+    // reflect them in the browser
+    this.on('changed', this._model, this._onSelectionChanged.bind(this));
   },
 
   // ---------------------------------------------
@@ -57,110 +41,44 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
   // ---------------------------------------------
 
   _onKeyUp: function(e) {
-    this._determine();
+    this._determineFromBrowser();
   },
 
   _onMouseUp: function(e) {
-    this._determine();
+    this._determineFromBrowser();
   },
 
   // Whenever a new block is added, give it focus
   _onBlockAdded: function(block, ix) {
-    this.select(ix, 0);
+    this._model.set({
+      startIx:      ix,
+      startOffset:  0
+    });
+  },
+
+  _onSelectionChanged: function(selection, caller) {
+    if (caller != this) this._setOnBrowser();
   },
 
   // ---------------------------------------------
   //  Accessors
   // ---------------------------------------------
 
-  text: function() {
-    return this._documentEl.childNodes[this._startIx].innerText;
-  },
-
-  isRange: function() {
-    return this._type == this.TYPES.RANGE;
-  },
-
   rectangle: function() {
     return this._rectangle;
   },
 
-  // ---------------------------------------------
-  //  Mutators
-  // ---------------------------------------------
-
-  // Given a block index and a text offset, set
-  // the selection in the browser.
-  select: function(ix, offset) {
-    if (document.createRange && window.getSelection) {
-
-      // Normal browsers
-      var range = document.createRange();
-      var sel = window.getSelection();
-      var mapping = this._translateToNodeSpace(ix, offset);
-      range.setStart(mapping.node, mapping.offset);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-
-    } else if (document.selection && document.body.createTextRange) {
-
-      // IE8
-      var textRange = document.body.createTextRange();
-      textRange.moveToElementText(this.documentEl.childNodes[ix]);
-      textRange.collapse(true);
-      textRange.moveEnd("character", offset);
-      textRange.moveStart("character", offset);
-      textRange.select();
-    }
-  },
-
-  null: function() {
-    this._setAttributes({});
+  startEl: function() {
+    return this._documentView._el.childNodes[this._model._startIx];
   },
 
   // ---------------------------------------------
   //  Utility Methods
   // ---------------------------------------------
 
-  _setAttributes: function(attrs) {
-    if (attrs['startIx']      != this._startIx ||
-        attrs['startOffset']  != this._startOffset ||
-        attrs['endIx']        != this._endIx ||
-        attrs['endOffset']    != this._endOffset) {
-          this._startIx = attrs['startIx'];
-          this._startOffset = attrs['startOffset'];
-          this._endIx = attrs['endIx'];
-          this._endOffset = attrs['endOffset'];
-          this._rectangle = attrs['rectangle'];
-          this._cacheType();
-          this._cacheModels();
-          this.trigger('changed', this);
-    }
-  },
-
-  // Automatically determine the selection type
-  // based upon the attributes
-  _cacheType: function() {
-    if (this._startIx === undefined) {
-      this._type = this.TYPES.NULL;
-    } else if (this._startIx == this._endIx && this._startOffset == this._endOffset) {
-      this._type = this.TYPES.CARET;
-    } else {
-      this._type = this.TYPES.RANGE;
-    }
-  },
-
-  // Cache the this.startModel and this.endModel
-  // models based upon the given indices
-  _cacheModels: function() {
-    this._startModel = this._startIx !== undefined ? this._model.children().at(this._startIx) : null;
-    this._endModel = this._endIx !== undefined ? this._model.children().at(this._endIx) : null;
-  },
-
   // Query the browser regarding the state of the
-  // selection
-  _determine: function() {
+  // selection and update the selection model
+  _determineFromBrowser: function() {
 
     // Begin by getting the start and end nodes and
     // offsets from the selection, plus the range
@@ -194,7 +112,7 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
 
     // Is the selection outside the document?
     if (!this._isWithinDocument(startNode)) {
-      this.null();
+      this._model.null();
       return;
     }
 
@@ -212,27 +130,51 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
     startOffset = this._measureTextOffset(startOffset, startNode, startElement, range, true);
     endOffset = this._measureTextOffset(endOffset, endNode, endElement, range, false);
 
-    // Grab the rectangle and convert it to editor
-    // space
+    // Grab the rectangle and convert it to
+    // document space
     var selectionRect = range.getBoundingClientRect();
-    var editorRect = this._editorEl.getBoundingClientRect();
-    var top = selectionRect.top - editorRect.top; var bottom = selectionRect.bottom - editorRect.top;
-    var left = selectionRect.left - editorRect.left; var right = selectionRect.right - editorRect.left;
-    var rectangle = {
+    var documentRect = this._documentView._el.getBoundingClientRect();
+    var top = selectionRect.top - documentRect.top; var bottom = selectionRect.bottom - documentRect.top;
+    var left = selectionRect.left - documentRect.left; var right = selectionRect.right - documentRect.left;
+    this._rectangle = {
       top:      top,
       left:     left,
       bottom:   bottom,
       right:    right
     };
 
-    // Update the selection
-    this._setAttributes({
+    // Update the model
+    this._model.set({
       startIx:      startIx,
       startOffset:  startOffset,
       endIx:        endIx,
-      endOffset:    endOffset,
-      rectangle:    rectangle
-    });
+      endOffset:    endOffset
+    }, this);
+  },
+
+  // Set the selection in the browser
+  _setOnBrowser: function() {
+    if (document.createRange && window.getSelection) {
+
+      // Normal browsers
+      var range = document.createRange();
+      var sel = window.getSelection();
+      var mapping = this._translateToNodeSpace(this._model._startIx, this._model._startOffset);
+      range.setStart(mapping.node, mapping.offset);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+    } else if (document.selection && document.body.createTextRange) {
+
+      // IE8
+      var textRange = document.body.createTextRange();
+      textRange.moveToElementText(this._documentView._el.childNodes[this._model._startIx]);
+      textRange.collapse(true);
+      textRange.moveEnd("character", this._model._startOffset);
+      textRange.moveStart("character", this._model._startOffset);
+      textRange.select();
+    }
   },
 
   // Helper function. We express our caret and
@@ -245,7 +187,7 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
   // element and the offset relative to the
   // start of that node).
   _translateToNodeSpace: function(ix, offset) {
-    var el = this._documentEl.childNodes[ix];
+    var el = this._documentView._el.childNodes[ix];
     var textNodes = this._getTextNodesIn(el);
     for(var i = 0; i < textNodes.length; i++) {
       var node = textNodes[i];
@@ -293,7 +235,7 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
   // Returns true if the document is an ancestor of
   // the given element, otherwise false.
   _isWithinDocument: function(el) {
-    if (this._documentEl == el) {
+    if (this._documentView._el == el) {
       return true;
     } else if (!el.parentNode || el.parentNode.nodeType != 1) {
       return false;
@@ -306,7 +248,7 @@ MediumEditor.Selection = MediumEditor.MVC.extend({
   // belongs to. This assumes the node exists within
   // a block in the editor.
   _blockElementFromNode: function(node) {
-    while (node.parentNode != this._documentEl) {
+    while (node.parentNode != this._documentView._el) {
       node = node.parentNode;
       if (node.parentNode == document.body) return null;
     }

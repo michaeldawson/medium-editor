@@ -9,7 +9,7 @@
 MediumEditor.BlockModel = MediumEditor.Model.extend({
 
   // ---------------------------------------------
-  //  Supported block types
+  //  Block Types
   // ---------------------------------------------
   //  Arguably heading could be done as a single
   //  type, with the subtypes achieved as layouts,
@@ -45,17 +45,13 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   //  Accessors
   // ---------------------------------------------
 
-  type: function() {
-    return this._type;
-  },
-
   // Returns the inner HTML of the block as a
   // string. This is separated from the `html`
   // method because when re-rendering views upon
   // content change, we only want the inner HTML.
   innerHTML: function() {
 
-    if (this._isTextType()) {
+    if (this.isText()) {
 
       // Paragraph, heading, quote etc. Markup the
       // text
@@ -68,7 +64,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
                       .replace(/^ /,'&nbsp;')          // Leading spaces should be nbsp
                       .replace(/ $/,'&nbsp;')          // Trailing spaces should be nbsp
 
-    } else if (this._isMediaType()) {
+    } else if (this.isMedia()) {
 
       // Images or videos. The actual img or iframe
       // element will be nested within a figure.
@@ -96,44 +92,83 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   // Return the full HTML of the block.
   html: function() {
 
-    if (this._isTextType()) {
-
-      // For text types (paragraphs, quotes etc),
-      // determine the tag, based on the type
-      var tag;
-      switch(this._type) {
-        case this.TYPES.PARAGRAPH:             tag = 'p'; break;
-        case this.TYPES.QUOTE:                 tag = 'blockquote'; break;
-        case this.TYPES.HEADING1:              tag = 'h2'; break;
-        case this.TYPES.HEADING2:              tag = 'h3'; break;
-        case this.TYPES.HEADING3:              tag = 'h4'; break;
-        case this.TYPES.ORDERED_LIST_ITEM:     tag = 'li'; break;
-        case this.TYPES.UNORDERED_LIST_ITEM:   tag = 'li'; break;
-      }
-
-      // Create the opening tag. If there's a
-      // layout, add it as a class.
-      var openingTag = "<" + tag;
-      if (this._layout) openingTag += " class='" + this._layout + "'";
-      openingTag += ">";
-
-      return openingTag + this.innerHTML() + "</" + tag + ">";
-
-    } else if (this._isMediaType()) {
-
-      // Create the opening tag, adding the
-      // layout class if one exists.
-      var openingTag = "<figure";
-      if (this._layout) openingTag += " class='" + this._layout + "'";
-      openingTag += ">";
-
-      return openingTag + this.innerHTML() + "</figure>";
-
-    } else if (this._type == this.TYPES.DIVIDER) {
-
-      // Divider
-      return "<hr>";
+    // Wrap the inner HTML
+    var tag;
+    switch(this._type) {
+      case this.TYPES.PARAGRAPH:             tag = 'p'; break;
+      case this.TYPES.QUOTE:                 tag = 'blockquote'; break;
+      case this.TYPES.HEADING1:              tag = 'h2'; break;
+      case this.TYPES.HEADING2:              tag = 'h3'; break;
+      case this.TYPES.HEADING3:              tag = 'h4'; break;
+      case this.TYPES.IMAGE:                 tag = 'figure'; break;
+      case this.TYPES.VIDEO:                 tag = 'figure'; break;
+      case this.TYPES.ORDERED_LIST_ITEM:     tag = 'li'; break;
+      case this.TYPES.UNORDERED_LIST_ITEM:   tag = 'li'; break;
+      case this.TYPES.DIVIDER:               tag = 'hr'; break;
     }
+
+    var openingTag = "<" + tag + ">";
+    var closingTag = this.isDivider() ? '' : "</" + tag + ">";
+    var html = openingTag + this.innerHTML() + closingTag;
+    return html;
+  },
+
+  text: function() {
+    return this._text;
+  },
+
+  type: function() {
+    return this._type;
+  },
+
+  layout: function() {
+    return this._layout;
+  },
+
+  isText: function() {
+    return this._type == this.TYPES.PARAGRAPH ||
+           this._type == this.TYPES.QUOTE ||
+           this._type == this.TYPES.HEADING1 ||
+           this._type == this.TYPES.HEADING2 ||
+           this._type == this.TYPES.HEADING3 ||
+           this._type == this.TYPES.ORDERED_LIST_ITEM ||
+           this._type == this.TYPES.UNORDERED_LIST_ITEM;
+  },
+
+  isMedia: function() {
+    return this._type == this.TYPES.IMAGE ||
+           this._type == this.TYPES.VIDEO;
+  },
+
+  isHeading: function() {
+    return this._type == this.TYPES.HEADING1 ||
+           this._type == this.TYPES.HEADING2 ||
+           this._type == this.TYPES.HEADING3;
+  },
+
+  isQuote: function() {
+    return this._type == this.TYPES.QUOTE;
+  },
+
+  isDivider: function() {
+    return this._type == this.TYPES.DIVIDER;
+  },
+
+  isParagraph: function() {
+    return this._type == this.TYPES.PARAGRAPH;
+  },
+
+  isListItem: function() {
+    return this._type == this.TYPES.ORDERED_LIST_ITEM ||
+           this._type == this.TYPES.UNORDERED_LIST_ITEM;
+  },
+
+  isOrderedListItem: function() {
+    return this._type == this.TYPES.ORDERED_LIST_ITEM;
+  },
+
+  isUnorderedListItem: function() {
+    return this._type == this.TYPES.UNORDERED_LIST_ITEM;
   },
 
   // ---------------------------------------------
@@ -157,7 +192,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   markup: function(startIx, endIx, type) {
 
     // Only permit anchor markups on headers
-    if (this._isHeading() && type != MediumEditor.Markup.TYPES.ANCHOR) return
+    if (this.isHeading() && type != MediumEditor.Markup.TYPES.ANCHOR) return
 
     this.markups.add(new MediumEditor.Markup({ type: type, start: start, end: end }));
     this.trigger('changed');
@@ -165,8 +200,12 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
 
   changeType: function(newType, attrs) {
     if (this._type != newType) {
-      this._setAttributes(attrs);
-      this._type = newType;
+      var newAttrs = {
+        type:   newType,
+        text:   this._text,
+      };
+      for (var attrname in attrs) { newAttrs[attrname] = attrs[attrname]; }
+      this._setAttributes(newAttrs);
       this.trigger('typechanged');
     }
   },
@@ -185,11 +224,11 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       this._parse(attrs['html']);
     } else {
       this._type = this.TYPES[(attrs['type'] || 'PARAGRAPH').toUpperCase()];
-      this._text = !this._isTextType() ? null : (attrs['text'] || '');
-      this._markups = !this._isTextType() ? null : new MediumEditor.MarkupCollection();
-      this._src = !this._isMediaType() ? null : (attrs['src'] || '');
-      this._caption = !this._isMediaType() ? null : (attrs['caption'] || '');
-      this._layout = !this._isMediaType() ? null : (attrs['layout'] || '');
+      this._text = !this.isText() ? null : (attrs['text'] || '');
+      this._markups = !this.isText() ? null : new MediumEditor.MarkupCollection();
+      this._src = !this.isMedia() ? null : (attrs['src'] || '');
+      this._caption = !this.isMedia() ? null : (attrs['caption'] || '');
+      this._layout = !this.isMedia() && !this.isQuote() ? null : (attrs['layout'] || '');
     }
   },
 
@@ -215,35 +254,16 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       case 'figure':
         attrs['type'] = el.children[0].tagName.toLowerCase() == 'img' ? 'IMAGE' : 'VIDEO';
         attrs['src'] = el.children[0].src;
-        attrs['caption'] = el.children[1].innerText;
+        if (el.children.length > 1) attrs['caption'] = el.children[1].innerText;
         break;
       case 'li':
         // TODO
         break;
     }
 
+    // TODO - interpret markups and layouts too
+
     // Set the attributes
     this._setAttributes(attrs);
-  },
-
-  _isTextType: function() {
-    return this._type == this.TYPES.PARAGRAPH ||
-           this._type == this.TYPES.QUOTE ||
-           this._type == this.TYPES.HEADING1 ||
-           this._type == this.TYPES.HEADING2 ||
-           this._type == this.TYPES.HEADING3 ||
-           this._type == this.TYPES.ORDERED_LIST_ITEM ||
-           this._type == this.TYPES.UNORDERED_LIST_ITEM;
-  },
-
-  _isMediaType: function() {
-    return this._type == this.TYPES.IMAGE ||
-           this._type == this.TYPES.VIDEO;
-  },
-
-  _isHeading: function() {
-    return this._type == this.TYPES.HEADING1 ||
-           this._type == this.TYPES.HEADING2 ||
-           this._type == this.TYPES.HEADING3;
   }
 });

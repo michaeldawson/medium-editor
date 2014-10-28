@@ -22,11 +22,11 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
   init: function(attrs) {
     this._super(attrs);
-    this.selection = attrs['selection'];
+    this._selection = attrs['selection'];
 
     // Create the element
-    this.el = document.createElement('div');
-    this.el.className = this.CLASS_NAME;
+    this._el = document.createElement('div');
+    this._el.className = this.CLASS_NAME;
 
     // Create the toggle button
     var toggle = document.createElement('button');
@@ -34,7 +34,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     toggle.className = this.TOGGLE_CLASS_NAME;
     this.on('mousedown touchstart', toggle, this._onToggle.bind(this));
     toggle.appendChild(document.createElement('span'));
-    this.el.appendChild(toggle);
+    this._el.appendChild(toggle);
 
     // Create buttons
     for (var action in this.BUTTONS) {
@@ -46,20 +46,20 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
         button.innerHTML = html;
         button.setAttribute('data-action', action);
         this.on('mousedown touchstart', button, this._onButton.bind(this));
-        this.el.appendChild(button);
+        this._el.appendChild(button);
       }
     }
 
     // Listen to selection changes and show/hide/
     // position accordingly
-    this.on('changed', this.selection, this._onSelectionChanged.bind(this));
+    this.on('changed', this._selection.model(), this._onSelectionChanged.bind(this));
   },
   _onToggle: function() {
     var baseClasses = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME];
-    if (this.el.className.indexOf(this.OPEN_CLASS_NAME) < 0) {
+    if (this._el.className.indexOf(this.OPEN_CLASS_NAME) < 0) {
       baseClasses.push(this.OPEN_CLASS_NAME);
     }
-    this.el.className = baseClasses.join(' ');
+    this._el.className = baseClasses.join(' ');
   },
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action');
@@ -71,7 +71,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
 
         break;
       case 'divider':
-        this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.DIVIDER);
+        this._model.changeBlockType('DIVIDER', this._selection.model());
         break;
     }
   },
@@ -97,7 +97,7 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
           // Replace the current block with a figure
           // containing the image, then give it
           // focus
-          this.selection.changeType(MediumEditor.BlockModel.prototype.TYPES.IMAGE, { src: e.target.result });
+          this._model.changeBlockType('IMAGE', { src: e.target.result }, this._selection.model());
 
         }).bind(this);
         reader.readAsDataURL(fileInput.files[0]);
@@ -114,24 +114,20 @@ MediumEditor.InlineTooltipView = MediumEditor.View.extend({
     this._position();
   },
   _position: function() {
-    if (this.selection.type == MediumEditor.Selection.prototype.TYPES.CARET &&                  // If it's a caret selection ...
-        this.selection.startModel.type == MediumEditor.BlockModel.prototype.TYPES.PARAGRAPH &&  // ... and we're on a paragraph ...
-        this.selection.startModel.text == '') {                                                 // ... and it's blank ...
+    if (this._selection.model().isCaret() &&                                          // If it's a caret selection ...
+        this._model.children().at(this._selection.model()._startIx).isParagraph() &&  // ... and we're on a paragraph ...
+        this._model.children().at(this._selection.model()._startIx).text() == '') {   // ... and it's blank ...
 
         // Position and show the element
-        var selectionEl = this.editorView.documentView.el.childNodes[selection.startIx];
-        var rect = selectionEl.getBoundingClientRect();
-        var editorRect = this.editorView.el.getBoundingClientRect();      // Convert to editor space
-        var top = rect.top - editorRect.top;
-        this.el.style.top = top + 'px';
-        this.el.style.left = '50px';
-
-        this.el.className = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME].join(' ');
+        var rect = this._selection.rectangle();
+        this._el.style.top = rect.top + 'px';
+        this._el.style.left = '50px';
+        this._el.className = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME].join(' ');
 
     } else {
 
         // Otherwise hide it
-        this.el.className = this.CLASS_NAME;
+        this._el.className = this.CLASS_NAME;
     }
   }
 });

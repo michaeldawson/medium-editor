@@ -97,44 +97,47 @@ MediumEditor.Model = MediumEditor.MVC.extend({
 
 MediumEditor.Collection = MediumEditor.MVC.extend({
   init: function(attrs) {
-    this.items = [];
+    this._items = [];
   },
   add: function(item) {
     this.insertAt(item, this.size());
   },
   insertAt: function(item, ix) {
-    this.items.splice(ix, 0, item);
+    this._items.splice(ix, 0, item);
     this.trigger('add', item, ix);
   },
   size: function() {
-    return this.items.length;
+    return this._items.length;
   },
   at: function(ix) {
-    return this.items[ix];
+    return this._items[ix];
   },
   remove: function(item) {
-    var ix = this.items.indexOf(item)
+    var ix = this._items.indexOf(item)
     if (ix >= 0) this.removeAt(ix);
   },
   removeAt: function(ix) {
     var item = this.at(ix);
-    this.items.splice(ix, 1);
+    this._items.splice(ix, 1);
     this.trigger('remove', item, ix);
   },
   clear: function() {
-    this.items = [];
+    this._items = [];
   }
 });
 
 MediumEditor.View = MediumEditor.MVC.extend({
   init: function(attrs) {
     if (!attrs['model']) throw 'Medium Editor views require a model';
-    this.model = attrs['model'];
+    this._model = attrs['model'];
   },
   // Override on to assume the default subject
   // object is the element, not the model
   on: function(type, obj, fn) {
-    if (typeof obj === 'function') { fn = obj; obj = this.el; }
+    if (typeof obj === 'function') { fn = obj; obj = this._el; }
     this._super(type, obj, fn);
-  }
+  },
+  model: function() {
+    return this._model;
+  },
 });

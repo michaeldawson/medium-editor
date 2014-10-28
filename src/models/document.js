@@ -35,9 +35,68 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
 
   // ---------------------------------------------
+  //  Mutators
+  // ---------------------------------------------
+
+  setText: function(text, selection) {
+    this._children.at(selection._startIx).setText(text);  // TODO
+  },
+
+  // Given a selection model, insert a paragraph.
+  // Note, the selection may be a caret (simply
+  // split the block at the caret point and add
+  // the trailing content to the new block) or a
+  // range (destroy content within the range, add
+  // the trailing content to a new block and add
+  // a blank block in between).
+  insertParagraph: function(selection) {
+
+    var remainderText = '';
+    for (var i = selection._startIx; i <= selection._endIx; i++) {
+
+      var block = this._children.at(i);
+
+      if (i == selection._endIx) {
+        var postText = block.text().substring(selection._endOffset);
+        if (i == selection._startIx) {
+          remainderText = postText;
+        } else {
+          if (selection._endOffset > 0) {
+            block.setText(postText);
+          }
+        }
+      }
+
+      if (i > selection._startIx && i < selection._endIx) {
+        // TODO - kill it
+      }
+
+      if (i == selection._startIx) {
+        if (selection._startOffset < block.text().length) {
+          block.setText(block.text().substring(0, selection._startOffset));
+        }
+      }
+    }
+
+    var newParagraph = new MediumEditor.BlockModel({ text: remainderText });
+    this._children.insertAt(newParagraph, selection._startIx + 1);
+  },
+
+  changeBlockType: function(newType, attrs, selection) {
+    if (selection == undefined) {
+      selection = attrs;
+      attrs = undefined;
+    }
+    var block = this._children.at(selection._startIx);
+    block.changeType(newType, attrs);
+  },
+
+  // ---------------------------------------------
   //  Utility Methods
   // ---------------------------------------------
 
+  // Given a HTML string of a document, parse it
+  // into a model representation.
   _parse: function(htmlStr) {
     var el = document.createElement('div');
     el.innerHTML = htmlStr.trim();
@@ -47,7 +106,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     }
   },
 
-  
+
 
 
 
@@ -61,73 +120,5 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       var end = i == selection.endIx ? selection.endOffset : block.text.length;
       block.markups.add(new markupKlass({ start: start, end: end }));
     }
-  },
-  insertParagraph: function(selection) {
-
-    var remainderText = '';
-    for (var i = selection.startIx; i <= selection.endIx; i++) {
-
-      var block = this.children.at(selection.startIx);
-
-      if (i == selection.endIx) {
-        var postText = block.text.substring(selection.endOffset);
-        if (i == selection.startIx) {
-          remainderText = postText;
-        } else {
-          if (selection.endOffset > 0) {
-            block.setText(postText);
-          }
-        }
-      }
-
-      if (i > selection.startIx && i < selection.endIx) {
-        // TODO - kill it
-      }
-
-      if (i == selection.startIx) {
-        if (selection.startOffset < block.text.length) {
-          block.setText(block.text.substring(0, selection.startOffset));
-        }
-      }
-    }
-
-    var newParagraph = new MediumEditor.BlockModel({ text: remainderText });
-    this.children.insertAt(newParagraph, selection.startIx + 1);
-
-
-
-      // range, confined to a single block - insert a new p afterward and give it
-      // all text after the end offset + remove the highlighted text from the
-      // start block
-      //   same for a li
-
-      // range, spanning multiple blocks - kill everything after the offset in
-      // the start block, all blocks in between and everything before the offset
-      // in the end block, then insert an empty paragraph between them
-      //   same for a li
-
-      // caret - insert a new paragraph and fill it with whatever
-      // text occurs in the current paragraph after the offset
-
-
-
-
-    // what if it begins on a heading and ends on something else, like an image or a li?
-
-
-    // TODO - if selection is a normal caret, create a new paragraph and
-    // fill it with whatever text occurs after the caret offset in the
-    // current paragraph, then give it focus
-    // if it's a list, add the next item (but don't inherit any of the
-    // markups of the current cursor position)
-    // it it's an image, create a new p under it
-    // if it's a range, kill that range and create a new p
-
-    // enter on an empty list item
-    //   in the middle of a list?
-  },
-  changeBlockType: function(selection, newType, attrs) {
-    var block = this.children.at(selection.startIx);
-    block.changeType(newType, attrs);
   }
 });
