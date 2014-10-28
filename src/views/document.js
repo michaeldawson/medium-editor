@@ -21,37 +21,24 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
     this._el.className = 'medium-editor-document';
     this._el.contentEditable = true;
 
-    // Add views for each existing block and
-    // begin listening for any new blocks being
-    // added
-    this._model.children().on('add', this._onBlockAdded.bind(this));
-    for(var i = 0; i < this._model.children().size(); i++) {
-      var block = this._model.children().at(i);
-      this.on('changed', block, this._render.bind(this));
-      this._addBlock(block);
-    }
+    // Listen for changes to the document
+    this.on('changed', this._model, this._onChanged.bind(this));
+
+    // Perform an initial render
+    this._render();
   },
 
   // ---------------------------------------------
   //  Event Handlers
   // ---------------------------------------------
 
-  _onBlockAdded: function(blockModel, ix) {
-    this._addBlock(blockModel, ix);
+  _onChanged: function() {
+    this._render();
   },
 
   // ---------------------------------------------
   //  Utility Methods
   // ---------------------------------------------
-
-  _addBlock: function(blockModel, ix) {
-    var blockView = new MediumEditor.BlockView({ model: blockModel });
-    if (ix === undefined || ix >= this._el.childNodes.length) {
-      this._el.appendChild(blockView._el);
-    } else {
-      this._el.insertBefore(blockView._el, this._el.childNodes[ix]);
-    }
-  },
 
   _render: function() {
     this._el.innerHTML = this._model.html();

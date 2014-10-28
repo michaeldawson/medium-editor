@@ -27,10 +27,6 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     this.on('keyup', this._documentView._el, this._onKeyUp.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));           // Listen to document in case the editor loses focus
 
-    // Listen for new blocks being added and give
-    // them focus
-    this.on('add', this._documentModel.children(), this._onBlockAdded.bind(this));
-
     // Listen for changes to the model and
     // reflect them in the browser
     this.on('changed', this._model, this._onSelectionChanged.bind(this));
@@ -48,14 +44,6 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     this._determineFromBrowser();
   },
 
-  // Whenever a new block is added, give it focus
-  _onBlockAdded: function(block, ix) {
-    this._model.set({
-      startIx:      ix,
-      startOffset:  0
-    });
-  },
-
   _onSelectionChanged: function(selection, caller) {
     if (caller != this) this._setOnBrowser();
   },
@@ -68,8 +56,12 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     return this._rectangle;
   },
 
-  startEl: function() {
-    return this._documentView._el.childNodes[this._model._startIx];
+  startBlockElement: function() {
+    return this._getBlockElementFromIndex(this._model._startIx);
+  },
+
+  endBlockElement: function() {
+    return this._getBlockElementFromIndex(this._model._endIx);
   },
 
   // ---------------------------------------------
@@ -111,24 +103,15 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     }
 
     // Is the selection outside the document?
-    if (!this._isWithinDocument(startNode)) {
+    if (!this._isWithinDocument(startNode) || startNode == this._documentView._el) {
       this._model.null();
       return;
     }
 
-    // Determine the start and end indices, in the
-    // context of the document blocks.
-    var startElement = this._blockElementFromNode(startNode);
-    var endElement = this._blockElementFromNode(endNode);
-    var startIx = Array.prototype.indexOf.call(startElement.parentNode.childNodes, startElement);
-    var endIx = Array.prototype.indexOf.call(endElement.parentNode.childNodes, endElement);
-
-    // The offsets are in node-space (e.g. they map
-    // to the offsets within their parent node, not
-    // the character offsets within the elements).
-    // Convert them.
-    startOffset = this._measureTextOffset(startOffset, startNode, startElement, range, true);
-    endOffset = this._measureTextOffset(endOffset, endNode, endElement, range, false);
+    // Determine the start and end indices and
+    // offsets, in model space.
+    var startPosition = this._domSpaceToModelSpace(startNode, startOffset, range, true);
+    var endPosition = this._domSpaceToModelSpace(endNode, endOffset, range, false);
 
     // Grab the rectangle and convert it to
     // document space
@@ -145,49 +128,71 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
     // Update the model
     this._model.set({
-      startIx:      startIx,
-      startOffset:  startOffset,
-      endIx:        endIx,
-      endOffset:    endOffset
+      startIx:      startPosition.ix,
+      startOffset:  startPosition.offset,
+      endIx:        endPosition.ix,
+      endOffset:    endPosition.offset
     }, this);
   },
 
   // Set the selection in the browser
   _setOnBrowser: function() {
-    if (document.createRange && window.getSelection) {
+    if (this._model.isNull()) {
 
-      // Normal browsers
-      var range = document.createRange();
-      var sel = window.getSelection();
-      var mapping = this._translateToNodeSpace(this._model._startIx, this._model._startOffset);
-      range.setStart(mapping.node, mapping.offset);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
+      // http://stackoverflow.com/a/3169849/889232
+      if (window.getSelection) {
+        if (window.getSelection().empty) {  // Chrome
+          window.getSelection().empty();
+        } else if (window.getSelection().removeAllRanges) {  // Firefox
+          window.getSelection().removeAllRanges();
+        }
+      } else if (document.selection) {  // IE?
+        document.selection.empty();
+      }
 
-    } else if (document.selection && document.body.createTextRange) {
+    } else {
+      if (document.createRange && window.getSelection) {
 
-      // IE8
-      var textRange = document.body.createTextRange();
-      textRange.moveToElementText(this._documentView._el.childNodes[this._model._startIx]);
-      textRange.collapse(true);
-      textRange.moveEnd("character", this._model._startOffset);
-      textRange.moveStart("character", this._model._startOffset);
-      textRange.select();
+        // Normal browsers
+        var range = document.createRange();
+        var sel = window.getSelection();
+        var mapping = this._modelSpaceToDOMSpace(this._model._startIx, this._model._startOffset);
+        range.setStart(mapping.node, mapping.offset);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+      } else if (document.selection && document.body.createTextRange) {
+
+        // IE8
+        var textRange = document.body.createTextRange();
+        textRange.moveToElementText(this._getBlockElementFromIndex(this._model._startIx));
+        textRange.collapse(true);
+        textRange.moveEnd("character", this._model._startOffset);
+        textRange.moveStart("character", this._model._startOffset);
+        textRange.select();
+      }
     }
   },
 
-  // Helper function. We express our caret and
-  // range selection points in document space
-  // (i.e. the index is the paragraph in the
-  // document and the offset is the character
-  // offset within it). However, to apply a
-  // selection, we need to be able to translate
-  // to node space (the internal nodes of an
-  // element and the offset relative to the
-  // start of that node).
-  _translateToNodeSpace: function(ix, offset) {
-    var el = this._documentView._el.childNodes[ix];
+  // Given a node and an offset within that node,
+  // return an object containing the block index
+  // and the text offset in model space.
+  _domSpaceToModelSpace: function(node, offset, range, start) {
+    var element = this._blockElementFromNode(node);
+    var ix = this._getIndexFromBlockElement(element);
+    var offset = this._measureTextOffset(offset, node, element, range, start);
+    return {
+      ix:       ix,
+      offset:   offset
+    }
+  },
+
+  // Given an index and offsets in model space,
+  // return the equivalent node and offset in
+  // DOM space
+  _modelSpaceToDOMSpace: function(ix, offset) {
+    var el = this._getBlockElementFromIndex(ix);
     var textNodes = this._getTextNodesIn(el);
     for(var i = 0; i < textNodes.length; i++) {
       var node = textNodes[i];
@@ -198,6 +203,74 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
       }
     }
     return { node: el.childNodes[0], offset: offset };
+  },
+
+  // Given an index in model space, return the
+  // corresponding block DOM element,
+  // considering layout and other containers
+  _getBlockElementFromIndex: function(ix) {
+    for (var i = 0; i < this._documentView._el.children.length; i++) {
+      var layoutContainer = this._documentView._el.childNodes[i];
+      for (var j = 0; j < layoutContainer.children.length; j++) {
+        var block = layoutContainer.children[j];
+        if (block.tagName.toLowerCase() == 'ol' || block.tagName.toLowerCase() == 'ul') {
+          if (ix < block.childNodes.length) {
+            return block.childNodes[ix];
+          } else {
+            ix -= block.childNodes.length;
+          }
+        } else {
+          ix--;
+        }
+        if (ix < 0) return block;
+      }
+    }
+    return null;
+  },
+
+  // Given a block element, determine what the
+  // index is within model space, considering
+  // layout and other containers
+  _getIndexFromBlockElement: function(el) {
+
+    // Walk up the DOM tree, summing the index
+    // offsets within parents, until we reach
+    // a layout container.
+    var ix = 0;
+    var node = el;
+    while (node.parentNode != this._documentView._el) {
+      ix += Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+      node = node.parentNode;
+    }
+
+    // Node should now be the layout container.
+    // Go through the previous layout containers
+    // and add the number of blocks occuring
+    // within them.
+    var layoutIxWithinDocument = Array.prototype.indexOf.call(this._documentView._el.childNodes, node);
+    for (var i = layoutIxWithinDocument - 1; i >= 0; i--) {
+      ix += this._numBlockElementsWithin(document.childNodes[i]);
+    }
+
+    return ix;
+  },
+
+  // Given a layout container, returns the number
+  // of block elements contained within. We can't
+  // simply count the child nodes, as it may
+  // contain a list, and each item counts as a
+  // block.
+  _numBlockElementsWithin: function(layoutContainer) {
+    var count = 0;
+    for(var i = 0; i < layoutContainer.childNodes.length; i++) {
+      var block = layoutContainer.childNodes[i];
+      if (block.tagName.toLowerCase() == 'ol' || block.tagName.toLowerCase() == 'ul') {
+        count += block.childNodes.length;
+      } else {
+        count++;
+      }
+    }
+    return count;
   },
 
   // Source: http://stackoverflow.com/a/6242538/889232
@@ -248,7 +321,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   // belongs to. This assumes the node exists within
   // a block in the editor.
   _blockElementFromNode: function(node) {
-    while (node.parentNode != this._documentView._el) {
+    while (node.parentNode.tagName.toLowerCase() != 'div') {    // Bit hacky - layout containers are the only divs
       node = node.parentNode;
       if (node.parentNode == document.body) return null;
     }

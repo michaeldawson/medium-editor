@@ -123,7 +123,10 @@ MediumEditor.Collection = MediumEditor.MVC.extend({
   },
   clear: function() {
     this._items = [];
-  }
+  },
+  indexOf: function(obj) {
+    return this._items.indexOf(obj);
+  },
 });
 
 MediumEditor.View = MediumEditor.MVC.extend({

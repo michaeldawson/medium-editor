@@ -40,6 +40,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
 
   setText: function(text, selection) {
     this._children.at(selection._startIx).setText(text);  // TODO
+    this.trigger('changed');
   },
 
   // Given a selection model, insert a paragraph.
@@ -80,6 +81,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
 
     var newParagraph = new MediumEditor.BlockModel({ text: remainderText });
     this._children.insertAt(newParagraph, selection._startIx + 1);
+    this.trigger('changed');
   },
 
   changeBlockType: function(newType, attrs, selection) {
@@ -89,6 +91,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     }
     var block = this._children.at(selection._startIx);
     block.changeType(newType, attrs);
+    this.trigger('changed');
   },
 
   // ---------------------------------------------

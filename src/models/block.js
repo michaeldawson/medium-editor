@@ -182,17 +182,10 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
-  setCaption: function(caption) {
-    if (this._caption != caption) {
-      this._caption = caption;
-      this.trigger('changed');
-    }
-  },
-
   markup: function(startIx, endIx, type) {
 
     // Only permit anchor markups on headers
-    if (this.isHeading() && type != MediumEditor.Markup.TYPES.ANCHOR) return
+    if (this.isHeading() && !this.isAnchor()) return
 
     this.markups.add(new MediumEditor.Markup({ type: type, start: start, end: end }));
     this.trigger('changed');
@@ -228,7 +221,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       this._markups = !this.isText() ? null : new MediumEditor.MarkupCollection();
       this._src = !this.isMedia() ? null : (attrs['src'] || '');
       this._caption = !this.isMedia() ? null : (attrs['caption'] || '');
-      this._layout = !this.isMedia() && !this.isQuote() ? null : (attrs['layout'] || '');
+      this._layout = !this.isMedia() && !this.isQuote() ? '' : (attrs['layout'] || '');
     }
   },
 
