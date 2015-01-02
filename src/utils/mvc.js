@@ -1,8 +1,8 @@
-// ---------------------------------------------
+// ------------------------------------------------
 //  Simple MVC Framework
-// ---------------------------------------------
+// ------------------------------------------------
 //  Inspired by Backbone.js
-// ---------------------------------------------
+// ------------------------------------------------
 
 // Source: http://www.quirksmode.org/dom/events/
 MediumEditor.BUILT_IN_EVENTS =
@@ -15,14 +15,13 @@ MediumEditor.BUILT_IN_EVENTS =
 MediumEditor.MVC = Class.extend({
 
   // Listen for a given event (can be either
-  // built-in or custom) on the given object
-  // (obj) and call the given function (fn)
-  // when it occurs.
+  // built-in or custom) on the given object (obj)
+  // and call the given function (fn) when it
+  // occurs.
   //
-  // Uses the event type to determine if
-  // it's a built-in event or custom, so
-  // don't use custom event names which
-  // already exist.
+  // Uses the event type to determine if it's a
+  // built-in event or custom, so don't use custom
+  // event names which already exist.
   //
   // Can be called as:
   //
@@ -32,12 +31,11 @@ MediumEditor.MVC = Class.extend({
   //
   //   object.on('eventname', function() { ... })
   //
-  // The second method assumes the object to
-  // listen to is this.
+  // The second method assumes the object to listen
+  // to is this.
   //
-  // Accepts multiple event types, separated
-  // by spaces.
-
+  // Accepts multiple event types, separated by
+  // spaces.
   on: function(type, obj, fn) {
 
     if (typeof obj === 'function') { fn = obj; obj = this; }

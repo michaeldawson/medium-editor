@@ -1,17 +1,17 @@
-// ---------------------------------------------
+// ------------------------------------------------
 //  Selection
-// ---------------------------------------------
+// ------------------------------------------------
 //  The selection view. Doesn't actually have a
-//  DOM element - just contains all the logic
-//  for translating the selection model to/from
-//  the browser.
-// ---------------------------------------------
+//  DOM element - just contains all the logic for
+//  translating the selection model to/from the
+//  browser.
+// ------------------------------------------------
 
 MediumEditor.SelectionView = MediumEditor.View.extend({
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Constructor
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   init: function(attrs) {
     this._super(attrs);
@@ -22,19 +22,16 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
     // Listen for any events which may modify the
     // selection. Note, we listen to the document
-    // element because there may be keyup events
-    // in the highlight menu which are irrelevant.
+    // element and not the editor element because
+    // there may be keyup events in the highlight
+    // menu which are irrelevant.
     this.on('keyup', this._documentView._el, this._onKeyUp.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));           // Listen to document in case the editor loses focus
-
-    // Listen for changes to the model and
-    // reflect them in the browser
-    this.on('changed', this._model, this._onSelectionChanged.bind(this));
   },
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Event Handlers
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   _onKeyUp: function(e) {
     this._determineFromBrowser();
@@ -44,13 +41,9 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     this._determineFromBrowser();
   },
 
-  _onSelectionChanged: function(selection, caller) {
-    if (caller != this) this._setOnBrowser();
-  },
-
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Accessors
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   rectangle: function() {
     return this._rectangle;
@@ -64,9 +57,22 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     return this._getBlockElementFromIndex(this._model._endIx);
   },
 
-  // ---------------------------------------------
+  // ----------------------------------------------
+  //  Instance Methods
+  // ----------------------------------------------
+
+  // Execute some work (the provided function),
+  // then immediately restore the selection to
+  // where it was. Used to wrap operations which
+  // alter/replace the DOM.
+  restoreAfter: function(func) {
+    func();
+    this._setOnBrowser();
+  },
+
+  // ----------------------------------------------
   //  Utility Methods
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   // Query the browser regarding the state of the
   // selection and update the selection model
@@ -74,7 +80,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
     // Begin by getting the start and end nodes and
     // offsets from the selection, plus the range
-    // object (we'll need that later);
+    // object (we'll need that later)
 
     var startNode, startOffset, endNode, endOffset, range;
     if (window.getSelection) {
@@ -189,8 +195,8 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   },
 
   // Given an index and offsets in model space,
-  // return the equivalent node and offset in
-  // DOM space
+  // return the equivalent node and offset in DOM
+  // space
   _modelSpaceToDOMSpace: function(ix, offset) {
     var el = this._getBlockElementFromIndex(ix);
     var textNodes = this._getTextNodesIn(el);
@@ -206,8 +212,8 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   },
 
   // Given an index in model space, return the
-  // corresponding block DOM element,
-  // considering layout and other containers
+  // corresponding block DOM element, considering
+  // layout and other containers
   _getBlockElementFromIndex: function(ix) {
     for (var i = 0; i < this._documentView._el.children.length; i++) {
       var layoutContainer = this._documentView._el.childNodes[i];
@@ -318,8 +324,8 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   },
 
   // Given a node, returns the block element it
-  // belongs to. This assumes the node exists within
-  // a block in the editor.
+  // belongs to. This assumes the node exists
+  // within a block in the editor.
   _blockElementFromNode: function(node) {
     while (node.parentNode.tagName.toLowerCase() != 'div') {    // Bit hacky - layout containers are the only divs
       node = node.parentNode;
@@ -329,17 +335,17 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   },
 
   // Given a range and a string value indicating
-  // whether we're querying the start or end of
-  // the range, return an object with properties
-  // `node` and `offset` representing the DOM
-  // node and offset at that end of the range.
-  // This is a polyfill for IE8, adapted from
+  // whether we're querying the start or end of the
+  // range, return an object with properties `node`
+  // and `offset` representing the DOM node and
+  // offset at that end of the range. This is a
+  // polyfill for IE8, adapted from
   // https://gist.github.com/Munawwar/1115251
   _ieSelectionInfo: function(range, whichEnd) {
     if(!range) return null;
     whichEnd = whichEnd.toLowerCase();
     var rangeCopy = range.duplicate(),                  // Create two copies
-        rangeObj  = range.duplicate();
+    rangeObj  = range.duplicate();
     rangeCopy.collapse(whichEnd == 'start');            // Collapse the range to either the start or the end
 
     // moveToElementText throws a fit if the user
@@ -347,13 +353,14 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     var parentElement = rangeCopy.parentElement();
     if (parentElement instanceof HTMLInputElement) return null;
 
-    // IE8 can't have the selection end at the zeroth
-    // index of the parentElement's first text node.
+    // IE8 can't have the selection end at the
+    // zeroth index of the parentElement's first
+    // text node.
     rangeObj.moveToElementText(parentElement);          // Select all text of parentElement
     rangeObj.setEndPoint('EndToEnd', rangeCopy);        // Move end point to rangeCopy
 
-    // Now traverse through sibling nodes to find the
-    // exact node and the selection's offset.
+    // Now traverse through sibling nodes to find
+    // the exact node and the selection's offset.
     return this._ieFindTextNode(parentElement.firstChild, rangeObj.text);
   },
 
@@ -363,9 +370,10 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   _ieFindTextNode: function(node, text) {
 
     // Iterate through all the child text nodes and
-    // check for matches. As we go through each text
-    // node keep removing the text value (substring)
-    // from the beginning of the text variable.
+    // check for matches. As we go through each
+    // text node keep removing the text value
+    // (substring) from the beginning of the text
+    // variable.
     do {
       if(node.nodeType == 3) {              // Text node
         var find = node.nodeValue;

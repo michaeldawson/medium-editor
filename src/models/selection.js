@@ -1,21 +1,20 @@
-// ---------------------------------------------
+// ------------------------------------------------
 //  Selection
-// ---------------------------------------------
+// ------------------------------------------------
 //  Models the selection. This never gets
-//  persisted - it's only really a model
-//  because other models (such as document)
-//  rely upon it.
-// ---------------------------------------------
+//  persisted - it's only really a model because
+//  other models (such as document) rely upon it.
+// ------------------------------------------------
 
 MediumEditor.SelectionModel = MediumEditor.Model.extend({
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Selection Types
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  The types of selection. This is
   //  automatically determined when new selection
   //  attributes are set.
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   TYPES: {
     NULL:                 {},
@@ -23,18 +22,19 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     RANGE:                {}
   },
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Constructor
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   init: function(attrs) {
     this._super(attrs);
     this._setAttributes(attrs);
+    this._determineType();
   },
 
-  // ---------------------------------------------
-  //  Accessors
-  // ---------------------------------------------
+  // ----------------------------------------------
+  //  Type Queries
+  // ----------------------------------------------
 
   isNull: function() {
     return this._type == this.TYPES.NULL;
@@ -48,9 +48,9 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     return this._type == this.TYPES.RANGE;
   },
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Mutators
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   null: function() {
     this._setAttributes({});
@@ -60,9 +60,9 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes(attrs, caller);
   },
 
-  // ---------------------------------------------
+  // ----------------------------------------------
   //  Utility Methods
-  // ---------------------------------------------
+  // ----------------------------------------------
 
   _setAttributes: function(attrs, caller) {
     if (attrs['startIx']      != this._startIx ||
@@ -88,6 +88,6 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     } else {
       this._type = this.TYPES.RANGE;
     }
-  }
+  },
 
 });

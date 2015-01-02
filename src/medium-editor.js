@@ -1,15 +1,20 @@
-// ---------------------------------------------
+// ------------------------------------------------
 //  Medium Editor 1.0.0
-// ---------------------------------------------
-//  (c) 2014 Cameron Price-Austin
+// ------------------------------------------------
+//  (c) 2015 Cameron Price-Austin
 //  May be freely distributed under the MIT
 //  license.
-// ---------------------------------------------
+// ------------------------------------------------
 
 MediumEditor.prototype = {
 
-  // Constructor - ensure the platform is supported,
-  // then setup the element, models and views.
+  // ----------------------------------------------
+  //  Constructor
+  // ----------------------------------------------
+  //  Ensure the platform is supported, then setup
+  //  the element, models and views.
+  // ----------------------------------------------
+
   init: function(selector, options) {
 
     // Ensure we can support this browser/device
@@ -30,6 +35,10 @@ MediumEditor.prototype = {
     this._editorView = new MediumEditor.EditorView({ model: this._documentModel });
     this._el.parentNode.insertBefore(this._editorView._el, this._el);
   },
+
+  // ----------------------------------------------
+  //  Utilities
+  // ----------------------------------------------
 
   // Check if the browser/device combination is
   // supported. We need querySelector and
