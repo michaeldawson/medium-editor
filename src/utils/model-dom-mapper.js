@@ -79,11 +79,48 @@ MediumEditor.ModelDOMMapper = {
       var blocks = model.blocks();
       var toReturn = "";
       for(var i = 0; i < blocks.size(); i++) {
-        toReturn += this.toHTML(blocks.at(i));
-      }
-      return "<div class='layout-single-column'>" + toReturn + "</div>";
 
-      // TODO - all the complexity around ul/li, layouts etc.
+        // Grab handles the previous, current and
+        // next blocks
+        var prevBlock = i > 0 ? blocks.at(i - 1) : null;
+        var currentBlock = blocks.at(i);
+        var nextBlock = i < (blocks.size() - 1) ? blocks.at(i + 1) : null;
+
+        // If this block has a different layout to
+        // the last, or is the first block, open
+        // the new layout
+        if (prevBlock == null || prevBlock.layout() != currentBlock.layout()) {
+          var layoutClass = currentBlock.layout();
+          layoutClass = layoutClass || "single-column";
+          toReturn += "<div class='layout-" + layoutClass + "'>";
+        }
+
+        // If this block is a list item and the
+        // last block was not, open the list
+        if (currentBlock.isListItem()) {
+          if (prevBlock == null || prevBlock.type() != currentBlock.type()) {
+            toReturn += "<" + (currentBlock.isOrderedListItem() ? "ol" : "ul") + ">";
+          }
+        }
+
+        // Add the block HTML
+        toReturn += this.toHTML(blocks.at(i));
+
+        // If this block is a list item and the
+        // next block is not, close the list.
+        if (currentBlock.isListItem()) {
+          if (nextBlock == null || nextBlock.type() != currentBlock.type()) {
+            toReturn += "</" + (currentBlock.isOrderedListItem() ? "ol" : "ul") + ">";
+          }
+        }
+
+        // If this block has a different layout to
+        // the next, close the layout
+        if (nextBlock == null || nextBlock.layout() != currentBlock.layout()) {
+          toReturn += "</div>";
+        }
+      }
+      return toReturn;
     }
 
   },

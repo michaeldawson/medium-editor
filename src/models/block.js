@@ -125,6 +125,11 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
            this.isVideo();
   },
 
+  isListItem: function() {
+    return this.isOrderedListItem() ||
+           this.isUnorderedListItem();
+  },
+
   // ----------------------------------------------
   //  Mutators
   // ----------------------------------------------

@@ -27,6 +27,10 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     // menu which are irrelevant.
     this.on('keyup', this._documentView._el, this._onKeyUp.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));           // Listen to document in case the editor loses focus
+
+    // Listen for changes to the model and reflect
+    // them in the browser
+    this.on('changed', this._model, this._onSelectionChanged.bind(this));
   },
 
   // ----------------------------------------------
@@ -39,6 +43,10 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
   _onMouseUp: function(e) {
     this._determineFromBrowser();
+  },
+
+  _onSelectionChanged: function(selection, caller) {
+    if (caller != this) this._setOnBrowser();
   },
 
   // ----------------------------------------------
