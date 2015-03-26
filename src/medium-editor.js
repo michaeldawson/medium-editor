@@ -15,19 +15,30 @@ MediumEditor.prototype = {
   //  the element, models and views.
   // ----------------------------------------------
 
-  init: function(selector, options) {
+  init: function(selector_or_element, options) {
 
     // Ensure we can support this browser/device
     if (!this._supportedPlatform()) return false;
 
     // Find the element - note we don't support
     // multiple elements at this time
-    this._el = document.querySelector(selector);
+    if (typeof selector_or_element == 'string' || selector_or_element instanceof String) {
+      this._el = document.querySelector(selector_or_element);
+    } else {
+      this._el = selector_or_element;
+    }
     if (!this._el) return false;
     this._el.style.display = 'none';
 
+    // Determine the starting HTML
+    var startingHTML = '';
+    if (this._el.tagName.toLowerCase() == 'textarea') {
+      startingHTML = this._el.value;
+    } else {
+      startingHTML = this._el.innerHTML;
+    }
+
     // Create the model
-    var startingHTML = this._el.innerHTML || '';
     this._documentModel = new MediumEditor.DocumentModel({ html: startingHTML });
 
     // Create the editor view and insert it into

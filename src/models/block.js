@@ -66,6 +66,10 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     return this._metadata;
   },
 
+  isEmpty: function() {
+    return this.isText() && this._text == '';
+  },
+
   // ----------------------------------------------
   //  Type Queries
   // ----------------------------------------------

@@ -15,7 +15,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this._super(attrs);
 
     // Our collection of block models. Use the
-    // Model-DOM mapper to parse the givem HTML
+    // Model-DOM mapper to parse the given HTML
     // string (assuming one was provided) into a
     // collection of block models.
     this._blocks = MediumEditor.ModelDOMMapper.parseHTMLIntoBlockCollection({ document: this, html: attrs['html'] || '' });
@@ -48,14 +48,15 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.trigger('changed');
   },
 
-  // Given a selection model, insert a paragraph.
+  // Given a selection model, insert a block
+  // (usually a paragraph, but can be a list item).
   // Note, the selection may be a caret (simply
   // split the block at the caret point and add the
   // trailing content to the new block) or a range
   // (destroy content within the range, add the
   // trailing content to a new block and add a
   // blank block in between).
-  insertParagraph: function(selection) {
+  insertBlock: function(selection) {
 
     var remainderText = '';
     var type = 'PARAGRAPH';
@@ -86,8 +87,8 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       }
     }
 
-    var newParagraph = new MediumEditor.BlockModel({ text: remainderText, type: type });
-    this._blocks.insertAt(newParagraph, selection._startIx + 1);
+    var newBlock = new MediumEditor.BlockModel({ text: remainderText, type: type });
+    this._blocks.insertAt(newBlock, selection._startIx + 1);
     this.trigger('changed');
   },
 

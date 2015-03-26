@@ -49,6 +49,18 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   },
 
   // ----------------------------------------------
+  //  Accessors
+  // ----------------------------------------------
+
+  startBlock: function() {
+    return this.isNull() ? null : this._document.blocks().at(this._startIx);
+  },
+
+  endBlock: function() {
+    return this.isNull() ? null : this._document.blocks().at(this._endIx);
+  },
+
+  // ----------------------------------------------
   //  Mutators
   // ----------------------------------------------
 
@@ -76,6 +88,7 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
           this._determineType();
           this.trigger('changed', this, caller);
     }
+    if (attrs['document']) this._document = attrs['document'];
   },
 
   // Automatically determine the selection type

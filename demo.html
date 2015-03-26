@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Medium Editor Demo</title>
     <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic|Open+Sans:300,700' rel='stylesheet' type='text/css'>
-    <link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet">
     <style type="text/css">
       /**
        * Eric Meyer's Reset CSS v2.0 (http://meyerweb.com/eric/tools/css/reset/)
@@ -70,6 +70,8 @@
     <script src='src/models/selection.js'></script>
     <script src='src/collections/block.js'></script>
     <script src='src/collections/markup.js'></script>
+    <script src='src/views/inline-tooltip-menu.js'></script>
+    <script src='src/views/highlight-menu.js'></script>
     <script src='src/views/selection.js'></script>
     <script src='src/views/editor.js'></script>
     <script src='src/views/document.js'></script>
@@ -77,7 +79,7 @@
 
   </head>
   <body>
-    <div id='medium-editor'>
+    <textarea id='medium-editor'>
       <h2>Medium Editor Demo</h2>
       <p>One of the most significant scenes in journalist Erik Parker and director One9’s new documentary captures Nas’ younger brother Jungle, as he is shown a picture from the disc sleeve of Illmatic, his older sibling’s supremely perfect, undeniably classic 1994 hip-hop album. The photo features Nas surrounded by friends, posed in the Queensbridge Projects. Jungle proceeds to run down where everyone is today, reeling off what seems an impossible list of misfortunes.</p>
       <p>“Some of them people gonna catch murders, some of them people gonna get beat up, some of them people gonna go to jail, but all them people gonna have a story,” Jungle says as he points out each person in the photo, some of them children when it was taken. “He’s doing 15 years. He’s fighting a murder. He’s doing life in prison. He just got locked up, no bail. He just did a shit load of time in North Carolina, bricks, crazy ass life. He do a bunch of fucking time, in and out of jail. This shit is real, this the projects.”</p>
@@ -88,7 +90,7 @@
         <figcaption>Nas at the Tribeca Film Festival, 2014</figcaption>
       </figure>
       <p>In the eyes of many, Nasir Jones accomplished everything he had set out to do with his 1994 debut album. Now celebrating 20 years since its release, the set has become required listening for any individual that claims to be part of hip-hop culture. From its intriguing title to its meticulous sequencing, Illmatic is the yardstick that all rap albums are measured against. Nas’ inner-city version of Shakespearian lyricism was inspired by the poetry of Rakim, molded into a new language art. Illmatic has not only aged like fine wine, but it is the very grape that all wines are manufactured from.</p>
-    </div>
+    </textarea>
     <script type='text/javascript'>
       var editor = new MediumEditor('#medium-editor');
     </script>

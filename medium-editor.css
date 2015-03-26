@@ -199,12 +199,16 @@
   border-style: solid;
 }
 
+/* ------------------------------------------------
+    Inline Tooltip
+   ------------------------------------------------ */
+
 .medium-editor-inline-tooltip {
   opacity: 0;
   position: absolute;
   z-index: 1000;
   margin-left: -40px;
-  margin-top: -1px;
+  margin-top: -5px;
 }
 
 .medium-editor-inline-tooltip-active {
@@ -227,13 +231,15 @@
   -webkit-border-radius: 32px;
   -moz-border-radius: 32px;
   text-align: center;
-  font-size: 12px;
+  font-size: 22px;
+  color: rgba(0,0,0,0.5);
+  cursor: pointer;
 }
 
 .medium-editor-inline-tooltip button:hover,
 .medium-editor-inline-tooltip button:focus {
-  border-color: rgba(0,0,0,0.44);
-  color: rgba(0,0,0,0.44);
+  border-color: rgba(0,0,0,0.5);
+  color: rgba(0,0,0,0.75);
   outline: none;
   -moz-outline: none;
   -webkit-outline: none;
@@ -249,28 +255,6 @@
   -o-transition: -o-transform 150ms ease-in-out;
 }
 
-.medium-editor-inline-tooltip-toggle span {
-  font-size: 28px;
-  line-height: 22px;
-  font-weight: 100;
-}
-.medium-editor-inline-tooltip-toggle span:before {
-  content: '+';
-}
-
-.medium-editor-inline-tooltip-button {
-  color: rgba(0,0,0,0.33);
-  display: none;
-  margin-left: 5px;
-  animation: grow-in 150ms forwards ease-in-out;
-  -webkit-animation: grow-in 150ms forwards ease-in-out;
-  -moz-animation: grow-in 150ms forwards ease-in-out;
-}
-
-.medium-editor-inline-tooltip-button .glyphicon {
-  top: 3px;
-}
-
 .medium-editor-inline-tooltip-open
 .medium-editor-inline-tooltip-toggle {
   transform: rotate3d(0,0,1,45deg);
@@ -280,10 +264,24 @@
   -o-transform: rotate3d(0,0,1,45deg);
 }
 
-.medium-editor-inline-tooltip-open
-.medium-editor-inline-tooltip-button {
+.medium-editor-inline-tooltip-button-set {
   display: inline-block;
 }
+
+.medium-editor-inline-tooltip-button-set button {
+  color: rgba(0,0,0,0.33);
+  display: none;
+  margin-left: 5px;
+  animation: grow-in 150ms forwards ease-in-out;
+  -webkit-animation: grow-in 150ms forwards ease-in-out;
+  -moz-animation: grow-in 150ms forwards ease-in-out;
+}
+.medium-editor-inline-tooltip-open
+.medium-editor-inline-tooltip-button-set button {
+  display: inline-block;
+}
+
+
 
 @-webkit-keyframes pop-upwards {
   0% {
