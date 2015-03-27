@@ -65,11 +65,11 @@ MediumEditor.ModelDOMMapper = {
         case model.isVideo():                 tag = 'figure'; break;
         case model.isOrderedListItem():       tag = 'li'; break;
         case model.isUnorderedListItem():     tag = 'li'; break;
-        case model.isDivider():               tag = 'hr'; break;
+        case model.isDivider():               tag = 'div'; break;     // Inner HTML is a hr, but we wrap it in a div so it can't be selected
       }
 
       var openingTag = "<" + tag + ( !model.isText() ? ' contenteditable="false"' : '' ) + ">";
-      var closingTag = model.isDivider() ? '' : "</" + tag + ">";
+      var closingTag = "</" + tag + ">";
       var html = openingTag + this.innerHTML(model) + closingTag;
       return html;
 
@@ -164,8 +164,8 @@ MediumEditor.ModelDOMMapper = {
 
     } else {
 
-      // Divider - has no inner HTML
-      return null;
+      // Divider
+      return "<hr>";
     }
   },
 

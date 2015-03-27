@@ -376,7 +376,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   // belongs to. This assumes the node exists
   // within a block in the editor.
   _blockElementFromNode: function(node) {
-    while (node.parentNode.tagName.toLowerCase() != 'div' &&  // Bit hacky - layout containers are the only divs
+    while (node.parentNode.tagName.toLowerCase() != 'div' &&  // Bit hacky - layout containers are the only divs (well dividers use them too, but they can't be selected)
            node.parentNode.tagName.toLowerCase() != 'ol' &&
            node.parentNode.tagName.toLowerCase() != 'ul') {
       node = node.parentNode;

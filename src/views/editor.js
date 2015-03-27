@@ -190,6 +190,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
               this._model.removeBlockAt(selectionModel._startIx - 1);
               selectionModel.set({
                 ix:      selectionModel._startIx - 1,
+                offset:  0,
               });
 
             } else if (prevBlock.isMedia()) {

@@ -117,10 +117,14 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
         this._insertImage();
         break;
       case 'video':
-
+        
         break;
       case 'divider':
         this._model.changeBlockType('DIVIDER', selectionModel);
+        selectionModel.set({
+          ix:       selectionModel._startIx + 1,
+          offset:   0
+        });
         break;
     }
   },
