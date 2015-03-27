@@ -170,6 +170,10 @@ MediumEditor.EditorView = MediumEditor.View.extend({
             // offset 0 of a list item. Change it
             // to a paragraph
             this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+            selectionModel.set({
+              ix:      selectionModel._startIx,
+              offset:  0,
+            });
 
           } else if (selectionModel._startIx == 0) {
 

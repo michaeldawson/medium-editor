@@ -62,6 +62,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
       case 'heading1':
       case 'heading2':
       case 'heading3':
+      case 'quote':
         this._model.changeBlockType(action.toUpperCase(), selectionModel);
         break;
     }
