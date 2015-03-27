@@ -19,7 +19,8 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   TYPES: {
     NULL:                 {},
     CARET:                {},
-    RANGE:                {}
+    RANGE:                {},
+    MEDIA:                {}
   },
 
   // ----------------------------------------------
@@ -48,6 +49,10 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     return this._type == this.TYPES.RANGE;
   },
 
+  isMedia: function() {
+    return this._type == this.TYPES.MEDIA;
+  },
+
   // ----------------------------------------------
   //  Accessors
   // ----------------------------------------------
@@ -60,6 +65,10 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     return this.isNull() ? null : this._document.blocks().at(this._endIx);
   },
 
+  withinOneBlock: function() {
+    return this._startIx == this._endIx;
+  },
+
   // ----------------------------------------------
   //  Mutators
   // ----------------------------------------------
@@ -68,15 +77,35 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes({});
   },
 
-  set: function(attrs, caller) {
-    this._setAttributes(attrs, caller);
+  set: function(attrs, options) {
+    this._setAttributes(attrs, options);
   },
 
   // ----------------------------------------------
   //  Utility Methods
   // ----------------------------------------------
 
-  _setAttributes: function(attrs, caller) {
+  _setAttributes: function(attrs, options) {
+
+    // Set default options. Supported options are
+    // `triggerEvent` (boolean) and `caller` (the
+    // object which is requesting the change, so
+    // objects which both subscribe to selection
+    // change events and cause them can avoid
+    // infinite loops in their handlers).
+    if (typeof options === 'undefined') options = {};
+    if (typeof options['triggerEvent'] === 'undefined') options['triggerEvent'] = true;
+
+    // Shorthand notation for caret selections
+    if (typeof attrs['ix'] !== 'undefined') {
+      attrs['startIx'] = attrs['ix'];
+      attrs['endIx'] = attrs['ix'];
+    }
+    if (typeof attrs['offset'] !== 'undefined') {
+      attrs['startOffset'] = attrs['offset'];
+      attrs['endOffset'] = attrs['offset'];
+    }
+
     if (attrs['startIx']      != this._startIx ||
         attrs['startOffset']  != this._startOffset ||
         attrs['endIx']        != this._endIx ||
@@ -86,7 +115,7 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
           this._endIx = attrs['endIx'];
           this._endOffset = attrs['endOffset'];
           this._determineType();
-          this.trigger('changed', this, caller);
+          if (options['triggerEvent']) this.trigger('changed', this, options['caller']);
     }
     if (attrs['document']) this._document = attrs['document'];
   },
@@ -96,6 +125,8 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   _determineType: function() {
     if (this._startIx === undefined) {
       this._type = this.TYPES.NULL;
+    } else if (this._document.blocks().at(this._startIx).isMedia()) {
+      this._type = this.TYPES.MEDIA;
     } else if (this._startIx == this._endIx && this._startOffset == this._endOffset) {
       this._type = this.TYPES.CARET;
     } else {

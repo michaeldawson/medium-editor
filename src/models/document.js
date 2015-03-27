@@ -33,8 +33,13 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   //  Instance Methods
   // ----------------------------------------------
 
-  setText: function(text, selection) {
-    this._blocks.at(selection._startIx).setText(text);
+  setText: function(text, block) {
+    block.setText(text);
+    this.trigger('changed');
+  },
+
+  removeBlockAt: function(ix) {
+    this._blocks.removeAt(ix);
     this.trigger('changed');
   },
 
@@ -46,6 +51,11 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     var block = this._blocks.at(selection._startIx);
     block.setType(newType, attrs);
     this.trigger('changed');
+  },
+
+  addMarkup: function(type, selection) {
+    var block = this._blocks.at(selection._startIx);
+    block.addMarkup(selection._startOffset, selection._endOffset, type);
   },
 
   // Given a selection model, insert a block

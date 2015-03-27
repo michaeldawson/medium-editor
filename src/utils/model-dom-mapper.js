@@ -68,7 +68,7 @@ MediumEditor.ModelDOMMapper = {
         case model.isDivider():               tag = 'hr'; break;
       }
 
-      var openingTag = "<" + tag + ">";
+      var openingTag = "<" + tag + ( !model.isText() ? ' contenteditable="false"' : '' ) + ">";
       var closingTag = model.isDivider() ? '' : "</" + tag + ">";
       var html = openingTag + this.innerHTML(model) + closingTag;
       return html;
@@ -157,7 +157,7 @@ MediumEditor.ModelDOMMapper = {
 
       // Add the caption (if it exists)
       if (model.metadata()['caption']) {
-        innerHTML += "<figcaption>" + model.metadata()['caption'] + "</figcaption>";
+        innerHTML += "<figcaption contenteditable='true'>" + model.metadata()['caption'] + "</figcaption>";
       }
 
       return innerHTML;

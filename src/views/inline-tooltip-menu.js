@@ -33,10 +33,6 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
     this._super(attrs);
     this._editor = attrs['editor'];
 
-    // Create the document view element
-    this._el = document.createElement('div');
-    this._el.className = 'medium-editor-inline-tooltip';
-
     // Listen for changes to the selection - if it
     // changes to a caret on an empty paragraph,
     // show and position, otherwise hide.
@@ -115,6 +111,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
 
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action');
+    var selectionModel = this._selection().model();
     switch(action) {
       case 'image':
         this._insertImage();
@@ -123,7 +120,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
 
         break;
       case 'divider':
-        this._model.changeBlockType('DIVIDER', this._selection().model());
+        this._model.changeBlockType('DIVIDER', selectionModel);
         break;
     }
   },

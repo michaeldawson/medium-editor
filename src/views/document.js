@@ -32,7 +32,7 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
 
   _onChanged: function() {
     this._render();
-    this._editor.selection().setOnBrowser();
+    this._editor.selection().setOnBrowser();  // Put the selection back
   },
 
   // ----------------------------------------------

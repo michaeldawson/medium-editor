@@ -94,6 +94,12 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     return this._type == this.TYPES.HEADING3;
   },
 
+  isHeading: function() {
+    return this.isHeading1() ||
+           this.isHeading2() ||
+           this.isHeading3();
+  },
+
   isOrderedListItem: function() {
     return this._type == this.TYPES.ORDERED_LIST_ITEM;
   },
@@ -164,12 +170,12 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
-  addMarkup: function(startIx, endIx, type) {
+  addMarkup: function(startOffset, endOffset, type) {
 
     // On headers, only permit anchors (i.e. not strong or em)
     if (this.isHeading() && !this.isAnchor()) return;
 
-    this._markups.add(new MediumEditor.Markup({ type: type, start: start, end: end }));
+    this._markups.add(new MediumEditor.MarkupModel({ type: type, start: startOffset, end: endOffset }));
     this.trigger('changed');
   },
 

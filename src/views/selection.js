@@ -56,22 +56,24 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   setOnBrowser: function() {
     if (this._model.isNull()) {
 
-      // http://stackoverflow.com/a/3169849/889232
-      if (window.getSelection) {
-        if (window.getSelection().empty) {  // Chrome
-          window.getSelection().empty();
-        } else if (window.getSelection().removeAllRanges) {  // Firefox
-          window.getSelection().removeAllRanges();
-        }
-      } else if (document.selection) {  // IE?
-        document.selection.empty();
-      }
+      this.deselect();
+
+    } else if (this._model.isMedia()) {
+
+      // Keep a handle to the selected media block
+      // so we can easily unset it later
+      this._selectedMediaEl = this._getBlockElementFromIndex(this._model._startIx);
+      this._selectedMediaEl.className = 'medium-editor-media-selected';
+      this.deselect();
+      this._updateRectangle(this._selectedMediaEl);
 
     } else {
+
+      var range;
       if (document.createRange && window.getSelection) {
 
         // Normal browsers
-        var range = document.createRange();
+        range = document.createRange();
         var sel = window.getSelection();
         var mapping = this._modelSpaceToDOMSpace(this._model._startIx, this._model._startOffset);
         range.setStart(mapping.node, mapping.offset);
@@ -82,35 +84,41 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
       } else if (document.selection && document.body.createTextRange) {
 
         // IE8
-        var textRange = document.body.createTextRange();
-        textRange.moveToElementText(this._getBlockElementFromIndex(this._model._startIx));
-        textRange.collapse(true);
-        textRange.moveEnd("character", this._model._startOffset);
-        textRange.moveStart("character", this._model._startOffset);
-        textRange.select();
+        range = document.body.createTextRange();
+        range.moveToElementText(this._getBlockElementFromIndex(this._model._startIx));
+        range.collapse(true);
+        range.moveEnd("character", this._model._startOffset);
+        range.moveStart("character", this._model._startOffset);
+        range.select();
       }
+      this._updateRectangle(range);
+
     }
   },
 
   // Query the browser regarding the state of the
   // selection and update the selection model
-  determineFromBrowser: function() {
+  determineFromBrowser: function(options) {
+
+    // Set default options
+    if (typeof options === 'undefined') options = {};
+    options['caller'] = this;
 
     // Begin by getting the start and end nodes and
     // offsets from the selection, plus the range
     // object (we'll need that later)
-
     var startNode, startOffset, endNode, endOffset, range;
     if (window.getSelection) {
 
       // Normal browsers
       var sel = window.getSelection();
-      range = sel.getRangeAt(0);
-
-      startNode = range.startContainer;
-      startOffset = range.startOffset;
-      endNode = range.endContainer;
-      endOffset = range.endOffset;
+      if (sel.type.toLowerCase() != 'none') {
+        range = sel.getRangeAt(0);
+        startNode = range.startContainer;
+        startOffset = range.startOffset;
+        endNode = range.endContainer;
+        endOffset = range.endOffset;
+      }
 
     } else if (document.selection) {
 
@@ -126,6 +134,27 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
       endOffset = endInfo.offset;
     }
 
+    // If there's nothing selected according to
+    // the browser ...
+    if (!startNode) {
+
+      // Check if media is selected
+      if (this._selectedMediaEl) {
+
+        // Yep. Update the model.
+        var ix = this._getIndexFromBlockElement(this._selectedMediaEl);
+        this._model.set({
+          startIx:      ix
+        }, options);
+
+      } else {
+
+        // Nup. Nothing is selected.
+        this._model.null();
+      }
+      return;
+    }
+
     // Is the selection outside the document?
     if (!this._isWithinDocument(startNode) || startNode == this._document()._el) {
       this._model.null();
@@ -137,16 +166,53 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     var startPosition = this._domSpaceToModelSpace(startNode, startOffset, range, true);
     var endPosition = this._domSpaceToModelSpace(endNode, endOffset, range, false);
 
-    // Grab the rectangle and convert it to
-    // document space
-    var selectionRect = range.getBoundingClientRect();
-    if (selectionRect.height == 0 && selectionRect.width == 0) {
-      // This happens sometimes with a blank node
-      // (e.g. just a <br> on a new paragraph). Get
-      // the rect from the parent node instead.
-      var selectionNode = startNode;
-      if (selectionNode.nodeType == 3) selectionNode = startNode.parentNode;
-      selectionRect = selectionNode.getBoundingClientRect();
+    // Update the rectangle
+    this._updateRectangle(range);
+
+    // Update the model
+    this._model.set({
+      startIx:      startPosition.ix,
+      startOffset:  startPosition.offset,
+      endIx:        endPosition.ix,
+      endOffset:    endPosition.offset
+    }, options);
+  },
+
+  deselect: function() {
+
+    // http://stackoverflow.com/a/3169849/889232
+    if (window.getSelection) {
+      if (window.getSelection().empty) {  // Chrome
+        window.getSelection().empty();
+      } else if (window.getSelection().removeAllRanges) {  // Firefox
+        window.getSelection().removeAllRanges();
+      }
+    } else if (document.selection) {  // IE?
+      document.selection.empty();
+    }
+  },
+
+  // ----------------------------------------------
+  //  Utilities
+  // ----------------------------------------------
+
+  _updateRectangle: function(range_or_el) {
+    var selectionRect;
+    if (this._model.isMedia()) {
+      selectionRect = range_or_el.getBoundingClientRect();
+    } else {
+
+      // Grab the rectangle and convert it to
+      // document space
+      var selectionRect = range_or_el.getBoundingClientRect();
+      if (selectionRect.height == 0 && selectionRect.width == 0) {
+        // This happens sometimes with a blank node
+        // (e.g. just a <br> on a new paragraph). Get
+        // the rect from the parent node instead.
+        var selectionNode = range_or_el.startContainer;
+        if (selectionNode.nodeType == 3) selectionNode = selectionNode.parentNode;
+        selectionRect = selectionNode.getBoundingClientRect();
+      }
     }
     var documentRect = this._document()._el.getBoundingClientRect();
     var top = selectionRect.top - documentRect.top; var bottom = selectionRect.bottom - documentRect.top;
@@ -157,19 +223,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
       bottom:   bottom,
       right:    right
     };
-
-    // Update the model
-    this._model.set({
-      startIx:      startPosition.ix,
-      startOffset:  startPosition.offset,
-      endIx:        endPosition.ix,
-      endOffset:    endPosition.offset
-    }, this);
   },
-
-  // ----------------------------------------------
-  //  Utilities
-  // ----------------------------------------------
 
   // Given a node and an offset within that node,
   // return an object containing the block index
