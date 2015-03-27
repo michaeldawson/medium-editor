@@ -34,8 +34,10 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   // ----------------------------------------------
 
   setText: function(text, block) {
-    block.setText(text);
-    this.trigger('changed');
+    if (text != block.text()) {
+      block.setText(text);
+      this.trigger('changed');
+    }
   },
 
   removeBlockAt: function(ix) {
