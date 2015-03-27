@@ -61,49 +61,13 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // changed flushed through yet. We manually
     // trigger it further down.
     this._selection.determineFromBrowser({ triggerEvent: false });
-    var selectionModel = this._selection.model();
 
-    // For system keys, we don't need to flush any
-    // changes through the model pipeline, so just
-    // trigger the selection event and return.
-    switch(e.which) {
-      case 9:           // Tab
-      case 13:          // Enter
-      case 16:          // Shift
-      case 17:          // Ctrl
-      case 18:          // Alt
-      case 19:          // Pause/break
-      case 20:          // Caps lock
-      case 27:          // Escape
-      case 33:          // Page up
-      case 34:          // Page down
-      case 35:          // End
-      case 36:          // Home
-      case 37:          // Left arrow
-      case 38:          // Up arrow
-      case 39:          // Right arrow
-      case 40:          // Down arrow
-      case 45:          // Insert
-      case 46:          // Delete
-      case 91:          // Left window key
-      case 92:          // Right window key
-      case 93:          // Select key
-        selectionModel.trigger('changed', selectionModel, this._selection);
-        return;
-    }
-
-    // Non-system keys. Flush the changes through
+    // Flush the changes through
     // the pipeline and handle special cases like
     // lists and captions.
-    if (selectionModel.startBlock().isMedia()) {
-
-      // console.log(this._selection.startBlockElement().innerText);
-      //
-      // could probably just do set text
-      // obviously dont do the 1. and * thing though
-    }
-
+    var selectionModel = this._selection.model();
     var text = this._selection.startBlockElement().innerText;
+    if (text == "\n") text = "";
     if (text.match(/^1\.\s/)) {
       this._model.changeBlockType('ORDERED_LIST_ITEM', { text: text.substring(3) }, selectionModel);
     } else if (text.match(/^\*\s/)) {
@@ -121,154 +85,141 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   // block structure, such as enter or backspace.
   _onKeyDown: function(e) {
 
-    // Is it a range? If so, unless it's one of a
-    // specific set of keys, it's going to destroy
-    // that range.
+    switch (e.which) {
 
-    var selectionModel = this._selection.model();
-    if (selectionModel.isRange()) {
+      case 77:                    // m - if the ctrl key is being held, it will fall through
+        if (!e.ctrlKey) break;
+      case 13:
 
-      // Ignore these keys
-      if (e.metaKey) return;
-      switch(e.which) {
-        case 9:           // Tab
-        case 16:          // Shift
-        case 17:          // Ctrl
-        case 18:          // Alt
-        case 19:          // Pause/break
-        case 20:          // Caps lock
-        case 27:          // Escape
-        case 33:          // Page up
-        case 34:          // Page down
-        case 35:          // End
-        case 36:          // Home
-        case 37:          // Left arrow
-        case 38:          // Up arrow
-        case 39:          // Right arrow
-        case 40:          // Down arrow
-        case 91:          // Left window key
-        case 92:          // Right window key
-        case 93:          // Select key
-          return;
-      }
+        // Enter / Ctrl + m
+        var selectionModel = this._selection.model();
+        var selectedBlock = selectionModel.startBlock();
 
-      // Okay, it's a range and it's not one of the
-      // system keys, so kill the range
-      if (selectionModel.withinOneBlock()) {
+        if (selectionModel.isCaret() &&
+            selectedBlock.isListItem() &&
+            selectedBlock.isEmpty()) {
 
-        // Selection is within a single block
-        var block = selectionModel.startBlock();
-        var text = block.text();
-        var newText = text.substring(0, selectionModel._startOffset) + text.substring(selectionModel._endOffset);
-        this._model.setText(newText, block);
+          // If we're on a blank list item,
+          // convert it to a paragraph
+          this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
 
-      } else {
+        } else {
 
-        // Selection spans multiple blocks
-        var startBlock = selectionModel.startBlock();
-        var endBlock = selectionModel.endBlock();
-        var newStartBlockText = startBlock.text().substring(0, selectionModel._startOffset) +
-          endBlock.text().substring(selectionModel._endOffset);
-        for(var i = selectionModel._endIx; i > selectionModel._startIx; i--) {
-          this._model.removeBlockAt(i);
-        }
-        this._model.setText(newStartBlockText, startBlock);
-      }
+          // Not on a blank list item. Insert a new
+          // block at the current selection.
+          // General strategy is we split the block,
+          // inserting another of the same type
+          // above the current block, unless
+          // selection is on an image (we create a
+          // paragraph underneath) or at offset 0
+          // of a header (the new block is a
+          // paragraph).
 
-    } else {
+          if (selectedBlock.isMedia()) {
 
-      // Caret selection.
-      switch (e.which) {
+            // Media item selected - insert a
+            // paragraph below
+            this._model.insertBlockAt('PARAGRAPH', selectionModel._startIx + 1);
 
-        case 77:                    // m - if the ctrl key is being held, it will fall through
-          if (!e.ctrlKey) break;
-        case 13:
-
-          // Enter / Ctrl + m. If the user is
-          // holding shift down, we consider this a
-          // line break and don't handle it.
-          if (e.shiftKey) return;
-
-          // Shift key isn't being pressed. If
-          // we're on a blank list item, convert it
-          // to a paragraph.
-          var selectionModel = this._selection.model();
-          var selectedBlock = selectionModel.startBlock();
-          if (selectionModel.isCaret() &&
-              selectedBlock.isListItem() &&
-              selectedBlock.isEmpty()) {
-              this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
-              this._selection.setOnBrowser();
           } else {
 
-            // Not a caret on a blank list item.
-            // Insert a new block at the current
-            // selection.
-            this._model.insertBlock(selectionModel);
-            selectionModel.set({
-              ix:      selectionModel._startIx + 1,
-              offset:  0
-            });
+            var text = selectedBlock.text();
+            var textBeforeCaret = text.substring(0, selectionModel._startOffset);
+            var textAfterCaret = text.substring(selectionModel._startOffset);
+            var newType = textBeforeCaret == '' && selectedBlock.isHeading() ? 'PARAGRAPH' : selectedBlock.type();
+
+            this._model.insertBlockAt(newType, selectionModel._startIx, { text: textBeforeCaret });
+            this._model.setText(textAfterCaret, selectedBlock);
           }
 
-          e.preventDefault();
-          break;
+          // Put focus on the new child paragraph
+          selectionModel.set({
+            ix:      selectionModel._startIx + 1,
+            offset:  0
+          });
+        }
 
-        case 8:
+        e.preventDefault();
+        break;
 
-          // Backspace
-          var selectionModel = this._selection.model();
-          var block = selectionModel.startBlock();
-          if (selectionModel._startOffset == 0 || block.isMedia()) {
+      case 8:
 
-            if (block.isListItem()) {
+        // Backspace. Generally want this to be
+        // handled by contenteditable, unless it's
+        // one of these scenarios:
+        //
+        //  Selected block is media - convert it to a paragraph
+        //  We're at offset zero:
+        //    Selected block is first in document - do nothing
+        //    Selected block is a list item - convert it to a paragraph
+        //    Prev block is a divider - kill the divider
+        //    Prev block is media - select it
+        //    Otherwise, merge the text of this block up into the previous
 
-              // Is this is a list item, change it
-              // to a paragraph
-              this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+        var selectionModel = this._selection.model();
+        var selectedBlock = selectionModel.startBlock();
 
-            } else if (block.isMedia()) {
+        if (selectedBlock.isMedia() || selectionModel._startOffset == 0) {
 
-              // TODO - kill it and handle cursor
+          // From here on, once we're done, we're
+          // going to prevent the default action.
 
-            } else if (selectionModel._startIx == 0) {
+          if (selectedBlock.isMedia() || selectedBlock.isListItem()) {
 
-              // First block in the document. Do
-              // nothing.
+            // It's a media item, or we're at
+            // offset 0 of a list item. Change it
+            // to a paragraph
+            this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+
+          } else if (selectionModel._startIx == 0) {
+
+            // First block in the document - do
+            // nothing
+
+          } else {
+
+            // We're at offset zero of a non-list,
+            // non-media item which is not the
+            // first block in the document.
+            // Depending on the previous block
+            // type ...
+            var prevBlock = this._model.blocks().at(selectionModel._startIx - 1);
+            if (prevBlock.isDivider()) {
+
+              // It's a divider - remove it
+              this._model.removeBlockAt(selectionModel._startIx - 1);
+              selectionModel.set({
+                ix:      selectionModel._startIx - 1,
+              });
+
+            } else if (prevBlock.isMedia()) {
+
+              // It's media. Select it.
+              selectionModel.set({
+                ix:      selectionModel._startIx - 1,
+              });
 
             } else {
 
-              // Not the first block, not a list
-              // item and not media. Merge it
-              // backward into the previous block
-              // and update the selection.
-              var prevBlock = this._model.blocks().at(selectionModel._startIx - 1);
-              var endOffset = prevBlock.text().length;
-              this._model.setText(prevBlock.text() + block.text(), prevBlock);
+              // Previous block is neither a
+              // divider or media, so merge the
+              // text of this block up into the
+              // previous and destroy this block.
+              var prevBlockText = prevBlock.text();
+              var newText = prevBlockText + selectedBlock.text();
+              this._model.setText(newText, prevBlock);
               this._model.removeBlockAt(selectionModel._startIx);
               selectionModel.set({
-                ix:      selectionModel._startIx - 1,
-                offset:  endOffset
+                ix:       selectionModel._startIx - 1,
+                offset:   prevBlockText.length
               });
-
-              // TODO - what if the prev block is a divider?
-
             }
-            e.preventDefault();
+
           }
 
-          break;
-
-        case 46:
-
-          // Delete
-          // TODO
-
-          break;
-
-          // need to also consider paste
-      }
-
+          e.preventDefault();
+        }
+        break;
     }
   },
 
@@ -286,7 +237,6 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       var ix = this._selection._getIndexFromBlockElement(element);
       this._selection.model().set({ startIx: ix });
     }
-
   },
 
   selection: function() {

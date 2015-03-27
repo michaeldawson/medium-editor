@@ -195,7 +195,12 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   // and nulls any which aren't appropriate for the
   // type (e.g. metadata on a paragraph element)
   _setAttributes: function(attrs) {
-    this._type = this.TYPES[(attrs['type'] || 'PARAGRAPH').toUpperCase()];
+    var type = attrs['type'] || 'PARAGRAPH';
+    if (typeof type == 'string' || type instanceof String) {
+      this._type = this.TYPES[type.toUpperCase()];
+    } else {
+      this._type = type;
+    }
     this._text = this._typeSupportsText() ? (attrs['text'] || '') : null;
     this._layout = this._typeSupportsLayout() ? (attrs['layout'] || '') : null;
     this._markups = this._typeSupportsText() ? new MediumEditor.MarkupCollection() : null;

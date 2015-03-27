@@ -58,47 +58,11 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     block.addMarkup(selection._startOffset, selection._endOffset, type);
   },
 
-  // Given a selection model, insert a block
-  // (usually a paragraph, but can be a list item).
-  // Note, the selection may be a caret (simply
-  // split the block at the caret point and add the
-  // trailing content to the new block) or a range
-  // (destroy content within the range, add the
-  // trailing content to a new block and add a
-  // blank block in between).
-  insertBlock: function(selection) {
-
-    var remainderText = '';
-    var type = 'PARAGRAPH';
-    for (var i = selection._startIx; i <= selection._endIx; i++) {
-
-      var block = this._blocks.at(i);
-
-      if (i == selection._endIx) {
-        var postText = block.text().substring(selection._endOffset);
-        if (i == selection._startIx) {
-          remainderText = postText;
-        } else {
-          if (selection._endOffset > 0) {
-            block.setText(postText);
-          }
-        }
-      }
-
-      if (i > selection._startIx && i < selection._endIx) {
-        // TODO - kill it
-      }
-
-      if (i == selection._startIx) {
-        if (block.isListItem() && block.text() != '') type = block.isOrderedListItem() ? 'ORDERED_LIST_ITEM' : 'UNORDERED_LIST_ITEM';
-        if (selection._startOffset < block.text().length) {
-          block.setText(block.text().substring(0, selection._startOffset));
-        }
-      }
-    }
-
-    var newBlock = new MediumEditor.BlockModel({ text: remainderText, type: type });
-    this._blocks.insertAt(newBlock, selection._startIx + 1);
+  insertBlockAt: function(type, index, attributes) {
+    attributes = typeof attributes === 'undefined' ? {} : attributes;
+    attributes['type'] = type;
+    var newBlock = new MediumEditor.BlockModel(attributes);
+    this._blocks.insertAt(newBlock, index);
     this.trigger('changed');
   },
 
