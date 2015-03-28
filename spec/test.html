@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html ng-app="medium-editor">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Medium Editor Test</title>
+    <link href='http://fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic|Open+Sans:300,700' rel='stylesheet' type='text/css'>
+    <link href="http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet">
+    <style type="text/css">
+      /**
+       * Eric Meyer's Reset CSS v2.0 (http://meyerweb.com/eric/tools/css/reset/)
+       * http://cssreset.com
+       */
+      html, body, div, span, applet, object, iframe,
+      h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+      a, abbr, acronym, address, big, cite, code,
+      del, dfn, em, img, ins, kbd, q, s, samp,
+      small, strike, strong, sub, sup, tt, var,
+      b, u, i, center,
+      dl, dt, dd, ol, ul, li,
+      fieldset, form, label, legend,
+      table, caption, tbody, tfoot, thead, tr, th, td,
+      article, aside, canvas, details, embed,
+      figure, figcaption, footer, header, hgroup,
+      menu, nav, output, ruby, section, summary,
+      time, mark, audio, video {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-size: 100%;
+        font: inherit;
+        vertical-align: baseline;
+      }
+      /* HTML5 display-role reset for older browsers */
+      article, aside, details, figcaption, figure,
+      footer, header, hgroup, menu, nav, section {
+        display: block;
+      }
+      body {
+        line-height: 1;
+      }
+      ol, ul {
+        list-style: none;
+      }
+      blockquote, q {
+        quotes: none;
+      }
+      blockquote:before, blockquote:after,
+      q:before, q:after {
+        content: '';
+        content: none;
+      }
+      table {
+        border-collapse: collapse;
+        border-spacing: 0;
+      }
+    </style>
+
+    <link rel="stylesheet" href="../medium-editor.css">
+
+    <script src='../src/utils/polyfills.js'></script>
+    <script src='../src/utils/inheritance.js'></script>
+    <script src='../src/utils/namespace.js'></script>
+    <script src='../src/utils/mvc.js'></script>
+    <script src='../src/utils/model-dom-mapper.js'></script>
+    <script src='../src/models/document.js'></script>
+    <script src='../src/models/block.js'></script>
+    <script src='../src/models/markup.js'></script>
+    <script src='../src/models/selection.js'></script>
+    <script src='../src/collections/block.js'></script>
+    <script src='../src/collections/markup.js'></script>
+    <script src='../src/views/inline-tooltip-menu.js'></script>
+    <script src='../src/views/highlight-menu.js'></script>
+    <script src='../src/views/selection.js'></script>
+    <script src='../src/views/editor.js'></script>
+    <script src='../src/views/document.js'></script>
+    <script src='../src/medium-editor.js'></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+  </head>
+  <body>
+    <textarea id='medium-editor'>
+      <p></p>
+    </textarea>
+    <script type='text/javascript'>
+      window.editor = new MediumEditor('#medium-editor');
+    </script>
+    <script type='text/javascript'>
+      var app = angular.module('medium-editor', []);  // Sucks we need to do this, but Protractor expects Angular
+    </script>
+  </body>
+</html>
