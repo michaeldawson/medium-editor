@@ -79,14 +79,14 @@ describe('Hitting enter at the start of a paragraph', function() {
     var paragraphs = doc.all(by.css('p'));
     expect(paragraphs.count()).toEqual(2);
     expect(paragraphs.get(0).getText()).toEqual('');
-    expect(paragraphs.get(1).getText()).toEqual('This is a test paragraph');
+    expect(paragraphs.get(1).getText()).toEqual(testString);
 
     var selectionModel = page.selectionModel();
     expect(selectionModel.startIx).toEqual(1);
     expect(selectionModel.startOffset).toEqual(0);
 
     var selectionDOM = page.selectionDOM();
-    expect(selectionDOM.startNodeValue).toEqual('This is a test paragraph');
+    expect(selectionDOM.startNodeValue).toEqual(testString);
     expect(selectionDOM.startOffset).toEqual(0);
   });
 });

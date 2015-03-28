@@ -66,14 +66,23 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // the pipeline and handle special cases like
     // lists and captions.
     var selectionModel = this._selection.model();
+    var selectionModelBlock = selectionModel.startBlock();
     var text = this._selection.startBlockElement().innerText;
     if (text == "\n") text = "";
-    if (text.match(/^1\.\s/)) {
+    if (selectionModelBlock.isParagraph() && text.match(/^1\.\s/)) {
       this._model.changeBlockType('ORDERED_LIST_ITEM', { text: text.substring(3) }, selectionModel);
-    } else if (text.match(/^\*\s/)) {
+      selectionModel.set({
+        ix: selectionModel._startIx,     // The offset has now changed because we stripped out "1. "
+        offset: 0
+      }, { triggerEvent: false });
+    } else if (selectionModelBlock.isParagraph() && text.match(/^\*\s/)) {
       this._model.changeBlockType('UNORDERED_LIST_ITEM', { text: text.substring(2) }, selectionModel);
+      selectionModel.set({
+        ix: selectionModel._startIx,     // The offset has now changed because we stripped out "* "
+        offset: 0
+      }, { triggerEvent: false });
     } else {
-      this._model.setText(text, selectionModel.startBlock());
+      this._model.setText(text, selectionModelBlock);
     }
 
     // Now trigger the selection event - the model
