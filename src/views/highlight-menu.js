@@ -14,8 +14,8 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     'heading1':   'H1',
     'heading2':   'H2',
     'heading3':   'H3',
-    'quote':      '“',
-    'anchor':     '<i class="ion-link"></i>'
+    'quote':      '“'
+    // 'anchor':     '<i class="ion-link"></i>'
   },
 
   CLASS_NAME: 'medium-editor-highlight-menu',

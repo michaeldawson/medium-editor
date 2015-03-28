@@ -222,11 +222,11 @@ MediumEditor.EditorView = MediumEditor.View.extend({
               var prevBlockText = prevBlock.text();
               var newText = prevBlockText + selectedBlock.text();
               this._model.setText(newText, prevBlock);
-              this._model.removeBlockAt(selectionModel._startIx);
               selectionModel.set({
                 ix:       selectionModel._startIx - 1,
                 offset:   prevBlockText.length
               });
+              this._model.removeBlockAt(selectionModel._startIx + 1);
             }
 
           }

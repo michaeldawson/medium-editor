@@ -11,7 +11,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
   BUTTONS: {
     'toggle':   '<i class="ion-ios-plus-empty"></i>',
     'image':    '<i class="ion-ios-camera-outline"></i>',
-    'video':    '<i class="ion-ios-videocam-outline"></i>',
+    // 'video':    '<i class="ion-ios-videocam-outline"></i>',
     'divider':  '<i class="ion-ios-minus-empty"></i>'
   },
 
@@ -117,7 +117,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
         this._insertImage();
         break;
       case 'video':
-        
+
         break;
       case 'divider':
         this._model.changeBlockType('DIVIDER', selectionModel);

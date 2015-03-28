@@ -301,10 +301,36 @@ describe('Typing "1. " at the start of a blank paragraph underneath an existing 
   });
 });
 
+describe('Backspacing a paragraph up into a list item', function() {
+  it('should merge the paragraph text into the list item', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
 
-// backspace a p into the list item above
+    doc.sendKeys("1. test item 1");
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys("Test paragraph");
+    for(var i = 0; i < "Test paragraph".length; i++) {
+      doc.sendKeys(protractor.Key.ARROW_LEFT);
+    }
+    doc.sendKeys(protractor.Key.BACK_SPACE);
 
-// *
+    expect(doc.all(by.css('li')).count()).toEqual(1);
+    expect(doc.all(by.css('p')).count()).toEqual(0);
+    expect(doc.all(by.css('li')).get(0).getText()).toEqual("test item 1Test paragraph");
 
-// highlight an entire list item and type over
-// highlight an entire list item and backspace
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(11);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual('test item 1Test paragraph');
+    expect(selectionDOM.startOffset).toEqual(11);
+  });
+});
+
+// TODO: *
+
+// TODO: highlight an entire list item and type over
+// TODO: highlight an entire list item and backspace

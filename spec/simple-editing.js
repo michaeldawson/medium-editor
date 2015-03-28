@@ -90,3 +90,86 @@ describe('Hitting enter at the start of a paragraph', function() {
     expect(selectionDOM.startOffset).toEqual(0);
   });
 });
+
+describe('Hitting backspace in the middle of a paragraph', function() {
+  it('should backspace normally', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("This is a test paragraph");
+    for(var i = 0; i < 12; i++) {
+      doc.sendKeys(protractor.Key.ARROW_LEFT);
+    }
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('p')).count()).toEqual(1);
+    expect(doc.element(by.css('p')).getText()).toEqual("This is a tst paragraph");
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(11);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual("This is a tst paragraph");
+    expect(selectionDOM.startOffset).toEqual(11);
+  });
+});
+
+describe('Hitting backspace at the start of a paragraph', function() {
+  it('should merge the current paragraph up into the previous one', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("This is a test paragraph");
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys("This is also a test paragraph");
+
+    for(var i = 0; i < "This is also a test paragraph".length; i++) {
+      doc.sendKeys(protractor.Key.ARROW_LEFT);
+    }
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('p')).count()).toEqual(1);
+    expect(doc.all(by.css('p')).get(0).getText()).toEqual("This is a test paragraphThis is also a test paragraph");
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(24);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual("This is a test paragraphThis is also a test paragraph");
+    expect(selectionDOM.startOffset).toEqual(24);
+  });
+});
+
+describe('Hitting backspace at the start of the first paragraph in the document', function() {
+  it('should do nothing', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("This is a test paragraph");
+    for(var i = 0; i < "This is a test paragraph".length; i++) {
+      doc.sendKeys(protractor.Key.ARROW_LEFT);
+    }
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('p')).count()).toEqual(1);
+    expect(doc.all(by.css('p')).get(0).getText()).toEqual("This is a test paragraph");
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(0);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual("This is a test paragraph");
+    expect(selectionDOM.startOffset).toEqual(0);
+
+  });
+});
+
+// TODO - pasting
+// TODO - typeover
+// TODO - normal typing updates model
+
+// TODO - dividers - backspacing into a divider kills the divider
+// TODO - headers - hitting enter at start or end, new block is a paragraph
