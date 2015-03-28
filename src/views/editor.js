@@ -94,6 +94,49 @@ MediumEditor.EditorView = MediumEditor.View.extend({
   // block structure, such as enter or backspace.
   _onKeyDown: function(e) {
 
+    // If selection is a range spanning multiple
+    // blocks, kill everything in the range (unless
+    // the key is something innocuous like an arrow
+    // or shift)
+    var selectionModel = this._selection.model();
+    var systemKeys = [
+      9,           // Tab
+      16,          // Shift
+      17,          // Ctrl
+      18,          // Alt
+      19,          // Pause/break
+      20,          // Caps lock
+      27,          // Escape
+      33,          // Page up
+      34,          // Page down
+      35,          // End
+      36,          // Home
+      37,          // Left arrow
+      38,          // Up arrow
+      39,          // Right arrow
+      40,          // Down arrow
+      45,          // Insert
+      91,          // Left window key
+      92,          // Right window key
+      93,          // Select key
+    ];
+    if (selectionModel.isRange() &&
+        selectionModel._startIx != selectionModel._endIx &&
+        systemKeys.indexOf(e.which) < 0) {
+
+      var startBlock = selectionModel.startBlock();
+      var endBlock = selectionModel.endBlock();
+      var newStartBlockText = startBlock.text().substr(0, selectionModel._startOffset);
+      newStartBlockText += endBlock.text().substr(selectionModel._endOffset);
+      this._model.setText(newStartBlockText, startBlock);
+
+      for(var i = selectionModel._endIx; i > selectionModel._startIx; i--) {
+        this._model.removeBlockAt(i);
+      }
+
+      if (e.which == 8) e.preventDefault();   // Don't double-backspace
+    }
+
     switch (e.which) {
 
       case 77:                    // m - if the ctrl key is being held, it will fall through
@@ -101,7 +144,6 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       case 13:
 
         // Enter / Ctrl + m
-        var selectionModel = this._selection.model();
         var selectedBlock = selectionModel.startBlock();
 
         if (selectionModel.isCaret() &&
@@ -154,84 +196,70 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       case 8:
 
         // Backspace. Generally want this to be
-        // handled by contenteditable, unless it's
-        // one of these scenarios:
-        //
-        //  Selected block is media - convert it to a paragraph
-        //  We're at offset zero:
-        //    Selected block is first in document - do nothing
-        //    Selected block is a list item - convert it to a paragraph
-        //    Prev block is a divider - kill the divider
-        //    Prev block is media - select it
-        //    Otherwise, merge the text of this block up into the previous
+        // handled by contenteditable, unless it
+        // will modify the block structure.
 
-        var selectionModel = this._selection.model();
-        var selectedBlock = selectionModel.startBlock();
+        if (selectionModel.isCaret()) {
+          var selectedBlock = selectionModel.startBlock();
+          var prevBlock = selectionModel._startIx == 0 ? null : this._model.blocks().at(selectionModel._startIx - 1);
+          if (selectedBlock.isMedia()) {
 
-        if (selectedBlock.isMedia() || selectionModel._startOffset == 0) {
-
-          // From here on, once we're done, we're
-          // going to prevent the default action.
-
-          if (selectedBlock.isMedia() || selectedBlock.isListItem()) {
-
-            // It's a media item, or we're at
-            // offset 0 of a list item. Change it
-            // to a paragraph
+            // Media selection. Change it to a
+            // paragraph.
             this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
             selectionModel.set({
-              ix:      selectionModel._startIx,
+              ix:      selectionModel._startIx,   // TODO - we could get rid of this if we defaulted startOffset on media selects
               offset:  0,
             });
+            e.preventDefault();
 
-          } else if (selectionModel._startIx == 0) {
+          } else if (selectedBlock.isListItem() && selectionModel._startOffset == 0) {
 
-            // First block in the document - do
-            // nothing
+            // List item and selection is at offset
+            // zero. Change it to a paragraph.
+            this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+            e.preventDefault();
 
-          } else {
+          } else if (selectionModel._startIx == 0 && selectionModel._startOffset == 0) {
 
-            // We're at offset zero of a non-list,
-            // non-media item which is not the
-            // first block in the document.
-            // Depending on the previous block
-            // type ...
-            var prevBlock = this._model.blocks().at(selectionModel._startIx - 1);
-            if (prevBlock.isDivider()) {
+            // At offset zero in the first block of
+            // the document - do nothing.
+            e.preventDefault();
 
-              // It's a divider - remove it
-              this._model.removeBlockAt(selectionModel._startIx - 1);
-              selectionModel.set({
-                ix:      selectionModel._startIx - 1,
-                offset:  0,
-              });
+          } else if (selectionModel._startOffset == 0 && prevBlock.isDivider()) {
 
-            } else if (prevBlock.isMedia()) {
+            // At offset zero and previous block is
+            // a divider. Kill it.
+            this._model.removeBlockAt(selectionModel._startIx - 1);
+            selectionModel.set({
+              ix:      selectionModel._startIx - 1,
+              offset:  0,
+            });
+            e.preventDefault();
 
-              // It's media. Select it.
-              selectionModel.set({
-                ix:      selectionModel._startIx - 1,
-              });
+          } else if (selectionModel._startOffset == 0 && prevBlock.isMedia()) {
 
-            } else {
+            // Previous block is media. Select it.
+            selectionModel.set({
+              ix:      selectionModel._startIx - 1,
+            });
+            e.preventDefault();
 
-              // Previous block is neither a
-              // divider or media, so merge the
-              // text of this block up into the
-              // previous and destroy this block.
-              var prevBlockText = prevBlock.text();
-              var newText = prevBlockText + selectedBlock.text();
-              this._model.setText(newText, prevBlock);
-              selectionModel.set({
-                ix:       selectionModel._startIx - 1,
-                offset:   prevBlockText.length
-              });
-              this._model.removeBlockAt(selectionModel._startIx + 1);
-            }
+          } else if (selectionModel._startOffset == 0) {
 
+            // Any other scenario where we're at
+            // offset zero - merge the block upward
+            // into the previous.
+            var prevBlockText = prevBlock.text();
+            var newText = prevBlockText + selectedBlock.text();
+            this._model.setText(newText, prevBlock);
+            selectionModel.set({
+              ix:       selectionModel._startIx - 1,
+              offset:   prevBlockText.length
+            });
+            this._model.removeBlockAt(selectionModel._startIx + 1);
+            e.preventDefault();
           }
-
-          e.preventDefault();
         }
         break;
     }
