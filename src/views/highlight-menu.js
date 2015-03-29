@@ -38,6 +38,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     // changes to a range, show and position,
     // otherwise hide.
     this.on('changed', this._selection().model(), this._onSelectionChanged.bind(this));
+    this.on('changed', this._model, this._onDocumentChanged.bind(this));
 
     // Perform an initial render
     this._render();
@@ -57,6 +58,13 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     }
   },
 
+  _onDocumentChanged: function() {
+    var selectionModel = this._selection().model();
+    if (selectionModel.isRange() || selectionModel.isMedia()) {
+      this._updateButtonStates();
+    }
+  },
+
   _onButton: function(e) {
     var action = e.currentTarget.getAttribute('data-action').toUpperCase();
     var selectionModel = this._selection().model();
@@ -73,6 +81,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
         this._model.changeBlockType(enabled ? 'PARAGRAPH' : action, selectionModel);
         break;
     }
+    this._updateButtonStates();
   },
 
   // ----------------------------------------------

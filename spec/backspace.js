@@ -195,6 +195,12 @@ describe('Highlighting over two blocks then hitting backspace', function() {
     expect(doc.all(by.css('p')).count()).toEqual(1);
     expect(doc.all(by.css('p')).get(0).getText()).toEqual("The quiox");
 
+    browser.manage().logs().get('browser').then(function(browserLogs) {
+      browserLogs.forEach(function(log){
+        console.log(log.message);
+      });
+    });
+
     var selectionModel = page.selectionModel();
     expect(selectionModel.startIx).toEqual(0);
     expect(selectionModel.startOffset).toEqual(7);
@@ -248,7 +254,6 @@ describe('Highlighting over multiple blocks then hitting backspace', function() 
 
 describe('Highlighting entire document then hitting backspace', function() {
   it('should remove the highlighted text and leave a blank paragraph', function() {
-
     var page = new TestPage();
     page.get();
     var doc = $('.medium-editor-document');
@@ -278,5 +283,113 @@ describe('Highlighting entire document then hitting backspace', function() {
   });
 });
 
-// highlighting over two blocks and hitting backspace, where blocks are different types (e.g. p/header)
-// highlighting multiple blocks where one is an image or divider then hitting backspace
+describe('Backspacing a non-paragraph block with content up into a blank paragraph', function() {
+  it('should retain its type', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys(
+      protractor.Key.SPACE,
+      protractor.Key.BACK_SPACE,
+      protractor.Key.ENTER,
+      "hello",
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.NULL
+    );
+
+    browser.sleep(250);   // Animation fade in
+    element.all(by.css('.medium-editor-highlight-menu button')).get(2).click();   // Convert to Heading1
+    doc.sendKeys(protractor.Key.ARROW_LEFT);
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('p')).count()).toEqual(0);
+    expect(doc.all(by.css('h2')).count()).toEqual(1);
+    expect(doc.all(by.css('h2')).get(0).getText()).toEqual('hello');
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(0);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual('hello');
+    expect(selectionDOM.startOffset).toEqual(0);
+  });
+});
+
+describe('Paragraph-highlighting then hitting backspace', function() {
+  it('should clear the paragraph', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("Test paragraph");
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys("Another test paragraph");
+    doc.sendKeys(protractor.Key.ARROW_UP);
+    for(var i = 0; i < 14; i++) {
+      doc.sendKeys(protractor.Key.ARROW_LEFT);
+    }
+    doc.sendKeys(
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_DOWN,
+      protractor.Key.NULL
+    );
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('p')).count()).toEqual(2);
+    expect(doc.all(by.css('p')).get(0).getText()).toEqual('');
+    expect(doc.all(by.css('p')).get(1).getText()).toEqual('Another test paragraph');
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(0);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual(null);
+    expect(selectionDOM.startOffset).toEqual(0);
+  });
+});
+
+describe('Highlighting over multiple list items and hitting backspace', function() {
+  it('should merge the first and last list item in the selection', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("1. The quick");
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys("brown fox");
+    doc.sendKeys(protractor.Key.ENTER);
+    doc.sendKeys("jumped over");
+    doc.sendKeys(
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_UP,
+      protractor.Key.ARROW_UP,
+      protractor.Key.NULL
+    );
+    doc.sendKeys(protractor.Key.BACK_SPACE);
+
+    expect(doc.all(by.css('li')).count()).toEqual(1);
+    expect(doc.all(by.css('li')).get(0).getText()).toEqual('The qud over');
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(0);
+    expect(selectionModel.startOffset).toEqual(6);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual('The qud over');
+    expect(selectionDOM.startOffset).toEqual(6);
+  });
+});
+
+// TODO - highlighting over two blocks and hitting backspace, where blocks are different types (e.g. p/header)
+// TODO - highlighting multiple blocks where one is an image or divider then hitting backspace

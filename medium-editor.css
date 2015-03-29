@@ -156,6 +156,12 @@
   animation: pop-upwards 300ms forwards linear;
   -webkit-animation: pop-upwards 300ms forwards linear;
   -moz-animation: pop-upwards 300ms forwards linear;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 .medium-editor-highlight-menu:after {
   content: ' ';
@@ -238,7 +244,7 @@
   position: absolute;
   z-index: 1000;
   margin-left: -40px;
-  margin-top: -5px;
+  margin-top: -1px;
 }
 
 .medium-editor-inline-tooltip-active {

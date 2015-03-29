@@ -88,9 +88,4 @@ describe('Changing selection while the highlight menu is open', function() {
   });
 });
 
-
-// if i highlight a range, then click somewhere within that range, the selection model doesn't seem to update
-//   hitting enter causes the line break at the last place the cursor was
-//   the highlight menu stays active
-
-// highlighting multiple blocks where one is an image or divider - which highlight menu buttons to show?
+// TODO - highlighting multiple blocks where one is an image or divider - which highlight menu buttons to show?

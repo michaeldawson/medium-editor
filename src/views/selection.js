@@ -75,9 +75,11 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
         // Normal browsers
         range = document.createRange();
         var sel = window.getSelection();
-        var mapping = MediumEditor.ModelDOMMapper.modelSpaceToDOMSpace(this._document()._el, this._model._startIx, this._model._startOffset);
-        range.setStart(mapping.node, mapping.offset);
-        range.collapse(true);
+        var startMapping = MediumEditor.ModelDOMMapper.modelSpaceToDOMSpace(this._document()._el, this._model._startIx, this._model._startOffset);
+        var endMapping = MediumEditor.ModelDOMMapper.modelSpaceToDOMSpace(this._document()._el, this._model._endIx, this._model._endOffset);
+        range.setStart(startMapping.node, startMapping.offset);
+        range.setEnd(endMapping.node, endMapping.offset);
+        if (this._model.isCaret()) range.collapse(true);
         sel.removeAllRanges();
         sel.addRange(range);
 
@@ -92,7 +94,6 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
         range.select();
       }
       this._updateRectangle(range);
-
     }
   },
 
@@ -166,6 +167,12 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     var startPosition = MediumEditor.ModelDOMMapper.domSpaceToModelSpace(startNode, startOffset, range, true);
     var endPosition = MediumEditor.ModelDOMMapper.domSpaceToModelSpace(endNode, endOffset, range, false);
 
+    // Special case - paragraph selecting.
+    if (endPosition.ix == startPosition.ix + 1 && endPosition.offset == 0) {
+      endPosition.ix = startPosition.ix;
+      endPosition.offset = this._editor._model.blocks().at(startPosition.ix).text().length;
+    }
+
     // Update the rectangle
     this._updateRectangle(range);
 
@@ -208,7 +215,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
       // (e.g. just a <br> on a new paragraph). Get
       // the rect from the parent node instead.
       var selectionNode = range_or_el.startContainer;
-      if (selectionNode.nodeType == 3) selectionNode = selectionNode.parentNode;
+      if (selectionNode.nodeType == 3 || selectionNode.tagName == 'BR') selectionNode = selectionNode.parentNode;
       selectionRect = selectionNode.getBoundingClientRect();
     }
 
@@ -216,6 +223,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     var documentRect = this._document()._el.getBoundingClientRect();
     var top = selectionRect.top - documentRect.top; var bottom = selectionRect.bottom - documentRect.top;
     var left = selectionRect.left - documentRect.left; var right = selectionRect.right - documentRect.left;
+
     this._rectangle = {
       top:            top,
       left:           left,

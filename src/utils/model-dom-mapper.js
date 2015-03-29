@@ -201,8 +201,8 @@ MediumEditor.ModelDOMMapper = {
     var injects = [];
     for (var i = 0; i < markups.size(); i++) {
       var markup = markups.at(i);
-      injects.push({ type: 'open', at: markup.start(), obj: markup });
-      injects.push({ type: 'close', at: markup.end(), obj: markup });
+      injects.push({ type: 'open', at: markup.start(), tag: this._tag(markup), obj: markup });
+      injects.push({ type: 'close', at: markup.end(), tag: this._tag(markup), obj: markup });
     }
 
     // Sort the injects by the index they occur at,
@@ -220,10 +220,10 @@ MediumEditor.ModelDOMMapper = {
 
           // Then by the tag name
           var order = a.type == 'open' ? 1 : -1;                                    // Reverse order for closing tags
-          return this._charComparison(a.obj.tag[0], b.obj.tag[0]) * order;
+          return this._charComparison(a.tag[0], b.tag[0]) * order;
         }
       }
-    });
+    }.bind(this));
 
     var toReturn = '';
     var textIx = 0;
@@ -263,8 +263,13 @@ MediumEditor.ModelDOMMapper = {
         // Now close this tag
         toReturn += this._closingTag(inject.obj);
 
-        // Now put the other tags back
-        while(temp.length) openTags.push(temp.pop());
+        // Now put the other tags back and re-open
+        // them
+        while(temp.length) {
+          var tag = temp.pop();
+          toReturn += this._openingTag(tag.obj);
+          openTags.push(tag);
+        }
       }
     }
 
@@ -321,7 +326,7 @@ MediumEditor.ModelDOMMapper = {
         offset -= node.length;
       }
     }
-    return { node: el.childNodes[0], offset: Math.min(el.childNodes[0].innerText.length, offset) };
+    return { node: el.childNodes[0], offset: Math.min((el.childNodes[0].nodeValue || el.childNodes[0].innerText).length, offset) };
   },
 
   // Given an index in model space, return the

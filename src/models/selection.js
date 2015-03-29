@@ -69,6 +69,14 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     return this._startIx == this._endIx;
   },
 
+  spansBlocks: function() {
+    return this._endIx > this._startIx;
+  },
+
+  entireBlock: function() {
+    return this.withinOneBlock() && this._startOffset == 0 && this._endOffset == this.startBlock().text().length;
+  },
+
   // ----------------------------------------------
   //  Mutators
   // ----------------------------------------------

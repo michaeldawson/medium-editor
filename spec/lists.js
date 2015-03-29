@@ -313,6 +313,3 @@ describe('Backspacing a paragraph up into a list item', function() {
 });
 
 // TODO: *
-
-// TODO: highlight an entire list item and type over
-// TODO: highlight an entire list item and backspace

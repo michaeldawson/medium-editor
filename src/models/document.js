@@ -56,8 +56,21 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
 
   markup: function(type, selection) {
-    var block = this._blocks.at(selection._startIx);
-    block.markup(selection._startOffset, selection._endOffset, type);
+    if (selection.isNull() || selection.isMedia()) return false;    // Only applicable to text selections
+
+    // Run through every block in the selection
+    for(var i = selection._startIx; i <= selection._endIx; i++) {
+      var block = this._blocks.at(i);
+
+      // Determine the start and end offsets of the
+      // selection in this block
+      var startOffset = i == selection._startIx ? selection._startOffset : 0;
+      var endOffset = i == selection._endIx ? selection._endOffset : block.text().length;
+
+      // Mark it up
+      block.markup(startOffset, endOffset, type);
+    }
+    
     this.trigger('changed');
   },
 
