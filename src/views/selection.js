@@ -197,31 +197,34 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   // ----------------------------------------------
 
   _updateRectangle: function(range_or_el) {
-    var selectionRect;
-    if (this._model.isMedia()) {
-      selectionRect = range_or_el.getBoundingClientRect();
-    } else {
 
-      // Grab the rectangle and convert it to
-      // document space
-      var selectionRect = range_or_el.getBoundingClientRect();
-      if (selectionRect.height == 0 && selectionRect.width == 0) {
-        // This happens sometimes with a blank node
-        // (e.g. just a <br> on a new paragraph). Get
-        // the rect from the parent node instead.
-        var selectionNode = range_or_el.startContainer;
-        if (selectionNode.nodeType == 3) selectionNode = selectionNode.parentNode;
-        selectionRect = selectionNode.getBoundingClientRect();
-      }
+    // Grab the bounding client rectangle,
+    // depending on whether we've been passed a
+    // range object or DOM element
+    var selectionRect = range_or_el.getBoundingClientRect();
+    if (selectionRect.height == 0 && selectionRect.width == 0) {
+
+      // This happens sometimes with a blank node
+      // (e.g. just a <br> on a new paragraph). Get
+      // the rect from the parent node instead.
+      var selectionNode = range_or_el.startContainer;
+      if (selectionNode.nodeType == 3) selectionNode = selectionNode.parentNode;
+      selectionRect = selectionNode.getBoundingClientRect();
     }
+
+    // Convert it to document space
     var documentRect = this._document()._el.getBoundingClientRect();
     var top = selectionRect.top - documentRect.top; var bottom = selectionRect.bottom - documentRect.top;
     var left = selectionRect.left - documentRect.left; var right = selectionRect.right - documentRect.left;
     this._rectangle = {
-      top:      top,
-      left:     left,
-      bottom:   bottom,
-      right:    right
+      top:            top,
+      left:           left,
+      bottom:         bottom,
+      right:          right,
+      clientTop:      selectionRect.top,
+      clientLeft:     selectionRect.left,
+      clientBottom:   selectionRect.bottom,
+      clientRight:    selectionRect.right
     };
   },
 

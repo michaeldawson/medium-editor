@@ -50,6 +50,18 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   },
 
   // ----------------------------------------------
+  //  Mutators
+  // ----------------------------------------------
+
+  setStart: function(start) {
+    this._start = start;
+  },
+
+  setEnd: function(end) {
+    this._end = end;
+  },
+
+  // ----------------------------------------------
   //  Type Queries
   // ----------------------------------------------
 
@@ -109,6 +121,6 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
 
   _typeSupportsMetadata: function() {
     return  this._type == this.TYPES.ANCHOR;
-  },
+  }
 
 });

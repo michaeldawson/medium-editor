@@ -69,4 +69,45 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.trigger('changed');
   },
 
+  // Return true if the given selection is entirely
+  // within the given type of markup, otherwise
+  // false.
+  isSelectionWithinMarkupType: function(type, selection) {
+    if (selection.isNull() || selection.isMedia()) return false;    // Only applicable to text selections
+
+    // Run through every block in the selection
+    for(var i = selection._startIx; i <= selection._endIx; i++) {
+      var block = this._blocks.at(i);
+
+      // Determine the start and end offsets of the
+      // selection in this block
+      var startOffset = i == selection._startIx ? selection._startOffset : 0;
+      var endOffset = i == selection._endIx ? selection._endOffset : block.text().length;
+
+      // If any part of that selection is outside
+      // the given markup type, return false
+      if (!block.isRangeMarkedUpAs(type, startOffset, endOffset)) return false;
+    }
+
+    return true;
+  },
+
+  // Return true if the given selection is entirely
+  // within the given type of block, otherwise
+  // false.
+  isSelectionWithinBlockType: function(type, selection) {
+    if (selection.isNull()) return false;
+
+    // Run through every block in the selection
+    var temp = new MediumEditor.BlockModel({ type: type });
+    for(var i = selection._startIx; i <= selection._endIx; i++) {
+      var block = this._blocks.at(i);
+
+      // Is this block of the given type?
+      if (block.type() != temp.type()) return false;
+    }
+
+    return true;
+  },
+
 });

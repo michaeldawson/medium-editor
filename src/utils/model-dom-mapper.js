@@ -201,8 +201,8 @@ MediumEditor.ModelDOMMapper = {
     var injects = [];
     for (var i = 0; i < markups.size(); i++) {
       var markup = markups.at(i);
-      injects.push({ type: 'open', at: markup.start, obj: markup });
-      injects.push({ type: 'close', at: markup.end, obj: markup });
+      injects.push({ type: 'open', at: markup.start(), obj: markup });
+      injects.push({ type: 'close', at: markup.end(), obj: markup });
     }
 
     // Sort the injects by the index they occur at,
@@ -242,7 +242,7 @@ MediumEditor.ModelDOMMapper = {
       if (inject.type == 'open') {
 
         // Tag opening
-        toReturn += inject.obj.openingTag();
+        toReturn += this._openingTag(inject.obj);
         openTags.push(inject);
 
       } else {
@@ -257,11 +257,11 @@ MediumEditor.ModelDOMMapper = {
 
         // Close the other tags first
         for (var j = 0; j < temp.length; j++) {
-          toReturn += temp[j].obj.closingTag();
+          toReturn += this._closingTag(temp[j].obj);
         }
 
         // Now close this tag
-        toReturn += inject.obj.closingTag();
+        toReturn += this._closingTag(inject.obj);
 
         // Now put the other tags back
         while(temp.length) openTags.push(temp.pop());
@@ -282,6 +282,29 @@ MediumEditor.ModelDOMMapper = {
     } else {
       return 0;
     }
+  },
+
+  _openingTag: function(model) {
+    return "<" + this._tag(model) + " " + this._openingTagAttributes(model) + ">";
+  },
+
+  _closingTag: function(model) {
+    return "</" + this._tag(model) + ">";
+  },
+
+  _tag: function(model) {
+    switch(true) {
+      case model.isStrong(): return 'strong';
+      case model.isEmphasis(): return 'em';
+      case model.isAnchor(): return 'a';
+    }
+  },
+
+  _openingTagAttributes: function(model) {
+    switch(true) {
+      case model.isAnchor(): return 'href="' + model.href + '"';
+    }
+    return '';
   },
 
   // Given an index and offsets in model space,

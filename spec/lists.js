@@ -1,22 +1,4 @@
-var path = require('path');
-
-var TestPage = function() {
-  this.get = function() {
-    browser.get('spec/test.html');
-  };
-  this.selectionModel = function() {
-    var toReturn = {};
-    toReturn.startIx = browser.executeScript('return window.editor._editorView._selection._model._startIx;');
-    toReturn.startOffset = browser.executeScript('return window.editor._editorView._selection._model._startOffset;');
-    return toReturn;
-  };
-  this.selectionDOM = function() {
-    var toReturn = {};
-    toReturn.startNodeValue = browser.executeScript('return window.getSelection().getRangeAt(0).startContainer.nodeValue;');
-    toReturn.startOffset = browser.executeScript('return window.getSelection().getRangeAt(0).startOffset;');
-    return toReturn;
-  };
-};
+var TestPage = require('./pages/test.page.js');
 
 describe('Typing "1. " at the start of a blank paragraph', function() {
   it('should convert it to an ordered list item', function() {

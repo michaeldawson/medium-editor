@@ -18,9 +18,13 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     // 'anchor':     '<i class="ion-link"></i>'
   },
 
-  CLASS_NAME: 'medium-editor-highlight-menu',
+  CLASS_NAME:                 'medium-editor-highlight-menu',
 
-  ACTIVE_CLASS_NAME: 'medium-editor-highlight-menu-active',
+  ACTIVE_CLASS_NAME:          'medium-editor-highlight-menu-active',
+
+  POSITION_UNDER_CLASS_NAME:  'medium-editor-highlight-menu-under',
+
+  BUTTON_ACTIVE_CLASS_NAME:   'medium-editor-highlight-menu-button-active',
 
   // ----------------------------------------------
   //  Constructor
@@ -47,23 +51,26 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     var selectionModel = this._selection().model();
     if (selectionModel.isRange() || selectionModel.isMedia()) {
       this._showAndPosition();
+      this._updateButtonStates();
     } else {
       this._hide();
     }
   },
 
   _onButton: function(e) {
-    var action = e.currentTarget.getAttribute('data-action');
+    var action = e.currentTarget.getAttribute('data-action').toUpperCase();
     var selectionModel = this._selection().model();
     switch(action) {
-      case 'strong':
-        this._model.addMarkup('STRONG', selectionModel);
+      case 'STRONG':
+      case 'EMPHASIS':
+        this._model.addMarkup(action, selectionModel);
         break;
-      case 'heading1':
-      case 'heading2':
-      case 'heading3':
-      case 'quote':
-        this._model.changeBlockType(action.toUpperCase(), selectionModel);
+      case 'HEADING1':
+      case 'HEADING2':
+      case 'HEADING3':
+      case 'QUOTE':
+        var enabled = this._model.isSelectionWithinBlockType(action, selectionModel);
+        this._model.changeBlockType(enabled ? 'PARAGRAPH' : action, selectionModel);
         break;
     }
   },
@@ -108,9 +115,39 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     var x = (rectangle.right + rectangle.left - highlightMenuWidth) / 2.0;
     var y = rectangle.top - highlightMenuHeight;
 
+    // Show underneath if there's not enough room
+    // at the top
+    classNames = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME];
+    if (rectangle.clientTop < highlightMenuHeight) {
+      y = rectangle.bottom;
+      classNames.push(this.POSITION_UNDER_CLASS_NAME);
+    }
+
     this._el.style.top = y + 'px';
     this._el.style.left = x + 'px';
-    this._el.className = [this.CLASS_NAME, this.ACTIVE_CLASS_NAME].join(' ');
+    this._el.className = classNames.join(' ');
+  },
+
+  _updateButtonStates: function() {
+    var selectionModel = this._selection().model();
+    for(var i = 0; i < this._el.childNodes.length; i++) {
+      var button = this._el.childNodes[i];
+      var action = button.dataset.action.toUpperCase();
+      switch(action) {
+        case 'STRONG':
+        case 'EMPHASIS':
+          var enabled = this._model.isSelectionWithinMarkupType(action, selectionModel);
+          button.className = enabled ? this.BUTTON_ACTIVE_CLASS_NAME : '';
+          break;
+        case 'HEADING1':
+        case 'HEADING2':
+        case 'HEADING3':
+        case 'QUOTE':
+          var enabled = this._model.isSelectionWithinBlockType(action, selectionModel);
+          button.className = enabled ? this.BUTTON_ACTIVE_CLASS_NAME : '';
+          break;
+      }
+    }
   },
 
   _hide: function() {

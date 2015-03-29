@@ -63,6 +63,10 @@
   font-weight: 700;
 }
 
+.medium-editor-document em {
+  font-style: italic;
+}
+
 .medium-editor-document p,
 .medium-editor-document blockquote,
 .medium-editor-document ul,
@@ -185,6 +189,16 @@
   -ms-transition: top 0.15s ease-out, left 0.15s ease-out;
   -o-transition: top 0.15s ease-out, left 0.15s ease-out;
 }
+.medium-editor-highlight-menu-under {
+  margin-top: 13px;
+}
+.medium-editor-highlight-menu-under:after {
+  bottom: auto;
+  top: -8px;
+  border-width: 0 10px 10px 10px;
+  border-top-color: transparent;
+  border-bottom-color: #262625;
+}
 .medium-editor-highlight-menu button {
   background: transparent;
   color: #fff;
@@ -204,7 +218,7 @@
   -moz-outline: none;
   -webkit-outline: none;
 }
-.medium-editor-highlight-menu button:active {
+.medium-editor-highlight-menu button.medium-editor-highlight-menu-button-active {
   color: #60d778;
 }
 

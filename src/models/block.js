@@ -187,6 +187,17 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   },
 
   // ----------------------------------------------
+  //  Instance Methods
+  // ----------------------------------------------
+
+  // Return true if every character within the
+  // given offset range is marked up with the given
+  // type
+  isRangeMarkedUpAs: function(type, startOffset, endOffset) {
+    return this._markups.isRangeMarkedUpAs(type, startOffset, endOffset);
+  },
+
+  // ----------------------------------------------
   //  Utilities
   // ----------------------------------------------
 
