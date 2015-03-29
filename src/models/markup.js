@@ -55,10 +55,19 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
 
   setStart: function(start) {
     this._start = start;
+    this.trigger('changed');
   },
 
   setEnd: function(end) {
     this._end = end;
+    this.trigger('changed');
+  },
+
+  setMetadata: function(key, value) {
+    if (this._metadata[key] != value) {
+      this._metadata[key] = value;
+      this.trigger('changed');
+    }
   },
 
   // ----------------------------------------------
@@ -100,7 +109,7 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   // appropriate for the type (e.g. metadata on a
   // strong markup)
   _setAttributes: function(attrs) {
-    this._type = this.TYPES[(attrs['type'] || 'STRONG').toUpperCase()];
+    this._type = typeof attrs['type'] == 'string' || attrs['type'] instanceof String ? this.TYPES[(attrs['type'] || 'STRONG').toUpperCase()] : attrs['type'];
     this._start = attrs['start'] || 0;
     this._end = attrs['end'] || 0;
     this._metadata = this._typeSupportsMetadata() ? (attrs['metadata'] || {}) : null;

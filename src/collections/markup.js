@@ -12,22 +12,44 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
     this._super(attrs);
   },
 
-  // Override the add method to normalise markup.
+  // Override the add method to implement toggle
+  // behaviour and normalise the markup.
   //
-  //  1. If two markups of the same kind overlap,
-  //     they should be compressed into a single
-  //     markup
+  // Scenarios (where A is the new markup and B
+  // is an existing markup of the same type):
   //
-  //     a) Unless those markups are links
-  //        with difference hrefs, in which
-  //        case they're separated
+  //    AAAAA     New markup covers old
+  //     BBB      Remove B (AAAAA)
   //
-  //  2. If two markups of the same kind are
-  //     consecutive, they should be compressed
-  //     into a single markup
+  //     AAA      New markup is within old
+  //    BBBBB     Un-mark the existing range (B   A)
   //
-  //     a) Unless they're links with different
-  //        hrefs
+  //     AAA      New and existing are the same
+  //     BBB      Unmark, leaving nothing ()
+  //
+  //    AAA       New partially covers old
+  //      BBB     Extend A's range (AAABB) and remove B
+  //
+  //      AAA     New partially covers old
+  //    BBB       Extend A's range (AAABB) and remove B
+  //
+  //    AA        New is consecutive to existing
+  //      BBB     Extend A's range (AAAAA) and remove B
+  //
+  //       AA     New is consecutive to existing
+  //    BBB       Extend A's range (AAAAA) and remove B
+  //
+  //      A       New would joined two existing
+  //    BB CC     Will be handled in two steps
+  //
+  //    AA        New and existing are separate
+  //       BB     Add the new (AA BB)
+  //
+  // Anchors are a special case. If new and
+  // existing items have the same href, they act
+  // like other markups. If the hrefs are different,
+  // the new href is applied and subsumes the
+  // existing range of any overlapping anchors.
   //
   add: function(item) {
 
@@ -40,54 +62,34 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
     for(var i = 0; i < others.length; i++) {
       var other = others[i];
 
-      // If it overlaps with, or is consecutive to,
-      // the new item ...
-      if (other.touches(item)) {
+      if (other.covers(item)) {
 
-        // If it's not an anchor, or has the same
-        // href, just merge them
-        if (!other.isAnchor() || other.metadata()['href'] == item.metadata()['href']) {
+        //  AAA
+        // BBBBB                    <-- Toggle (B   A)
+        this._toggle(other, item);
+        return;                     // We can exit here because A was within B, so there shouldn't be any further interactions
 
-          other.setStart(Math.min(other.start(), item.start()));
-          other.setEnd(Math.max(other.end(), item.end()));
-          return;
+      } else if (other.touches(item)) {
+
+        // If the items are not anchors with the
+        // same hrefs, extend the new item's range
+        // and remove the existing
+        if (!item.isAnchor() || item.metadata()['href'] == other.metadata()['href']) {
+
+          item.setStart(Math.min(other.start(), item.start()));
+          item.setEnd(Math.max(other.end(), item.end()));
+          this.remove(other);
 
         } else {
 
+          // Anchors with different hrefs. Keep
+          // both, but separate their ranges - new
+          // item gets precedence.
           if (item.covers(other)) {
-
-            // If the new markup covers the old
-            // markup entirely, replace it
-            other.setStart(item.start());
-            other.setEnd(item.end());
-            other.metadata()['href'] = item.metadata()['href'];
-            return;
-
-          } else if (other.covers(item)) {
-
-            // If the old markup covers the new
-            // one, split them
-            var beforeStart = other.start();
-            var beforeEnd = item.start();
-            var afterStart = item.end();
-            var afterEnd = other.end();
-
-            if (beforeStart == beforeEnd) {
-              other.setStart(afterStart);
-            } else if (afterStart == afterEnd) {
-              other.setEnd(beforeEnd);
-            } else {
-              other.setEnd(beforeEnd);
-              var newOther = new MediumEditor.MarkupModel({ type: other.type, start: afterStart, end: afterEnd });
-              this.add(newOther);
-            }
-
+            this.remove(other);
           } else {
-
-            // Otherwise just separate them, with
-            // the new markup taking precedence
             other.setStart(Math.max(other.start(), item.end()));
-            other.setEnd(Math.min(other.end(), item.end()));
+            other.setEnd(Math.min(other.end(), item.start()));
           }
         }
       }
@@ -119,7 +121,7 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
   // Given a markup object, returns other markups
   // of the same kind in the collection
   _otherItemsOfSameType: function(subject) {
-    var others = this._itemsOfType(subject);
+    var others = this._itemsOfType(subject.type());
     var ix = others.indexOf(subject);
     if (ix >= 0) others.splice(ix, 1);
     return others;
@@ -132,6 +134,55 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
       if (x.type() == type) toReturn.push(x);
     }
     return toReturn;
+  },
+
+  // Given an existing item and a new item, where
+  // the existing item entirely covers the new item,
+  // toggle the markup so only the sections outside
+  // the new item remain. This may involve updating
+  // the existing item, removing it or adding
+  // another.
+  _toggle: function(existingItem, newItem) {
+    if (!existingItem.covers(newItem)) return;
+
+    var beforeStart = existingItem.start();
+    var beforeEnd = newItem.start();
+    var afterStart = newItem.end();
+    var afterEnd = existingItem.end();
+
+    if (beforeStart == beforeEnd && afterStart == afterEnd) {
+
+      // The two share the same range. Just remove
+      // existing.
+      this.remove(existingItem);
+
+    } else if (beforeStart == beforeEnd) {
+
+      // The new item is aligned to the left
+      // boundary of the existing. Update the
+      // existing's range.
+      existingItem.setStart(afterStart);
+
+    } else if (afterStart == afterEnd) {
+
+      // The new item as aligned to the right
+      // boundary of the existing. Update the
+      // existing's range.
+      existingItem.setEnd(beforeEnd);
+
+    } else {
+
+      // The new and existing items do not share
+      // any boundaries.
+      existingItem.setEnd(beforeEnd);
+      this.add(new MediumEditor.MarkupModel({ type: newItem.type(), start: afterStart, end: afterEnd }));
+    }
+
+    // Add the new item if it's an anchor and the
+    // href differs to the existing item
+    if(newItem.isAnchor() && newItem.metadata()['href'] == existingItem.metadata()['href']) {
+      this.add(newItem);
+    }
   }
 
 });

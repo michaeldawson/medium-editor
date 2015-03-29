@@ -170,11 +170,17 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
-  addMarkup: function(startOffset, endOffset, type) {
+  // Marks up text in the given range with the
+  // given type. Or, if the entire range is already
+  // marked up in the type, unmarks it.
+  markup: function(startOffset, endOffset, type) {
 
-    // On headers, only permit anchors (i.e. not strong or em)
+    // On headers, only permit anchors (i.e. not
+    // strong or em)
     if (this.isHeading() && !this.isAnchor()) return;
 
+    // The `MediumEditor.MarkupCollection.add`
+    // method takes care of this behaviour
     this._markups.add(new MediumEditor.MarkupModel({ type: type, start: startOffset, end: endOffset }));
     this.trigger('changed');
   },

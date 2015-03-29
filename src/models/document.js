@@ -55,9 +55,9 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     this.trigger('changed');
   },
 
-  addMarkup: function(type, selection) {
+  markup: function(type, selection) {
     var block = this._blocks.at(selection._startIx);
-    block.addMarkup(selection._startOffset, selection._endOffset, type);
+    block.markup(selection._startOffset, selection._endOffset, type);
     this.trigger('changed');
   },
 

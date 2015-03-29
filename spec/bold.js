@@ -2,7 +2,7 @@ var TestPage = require('./pages/test.page.js');
 
 describe('Selecting bold on the highlight menu over ordinary text', function() {
   it('should bold the text, leaving the selection and menu in place and the button in an active state', function() {
-    
+
   });
 });
 
@@ -17,3 +17,5 @@ describe('Selecting bold on the highlight menu over ordinary text', function() {
 //  vice-versa - opening on existing normal then moving onto bold
 // cmd+b
 // active state when selecting a range which includes bold, non-bold, starting at different spots etc.
+
+// bold and emphasis in same range

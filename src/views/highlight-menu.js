@@ -63,7 +63,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     switch(action) {
       case 'STRONG':
       case 'EMPHASIS':
-        this._model.addMarkup(action, selectionModel);
+        this._model.markup(action, selectionModel);
         break;
       case 'HEADING1':
       case 'HEADING2':
