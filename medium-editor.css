@@ -2,6 +2,16 @@
   position: relative;
 }
 
+.medium-editor-document {
+  padding-top: 50px;
+}
+
+.medium-editor-document.medium-editor-document-blank div *:before {
+  content: 'Start typing ...';
+  color: rgba(0,0,0,0.2);
+  position: absolute;
+}
+
 .medium-editor-document:focus {
   outline: none;
   -moz-outline: none;

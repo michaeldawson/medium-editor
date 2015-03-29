@@ -33,6 +33,10 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   //  Instance Methods
   // ----------------------------------------------
 
+  isBlank: function() {
+    return this._blocks.size() == 1 && this._blocks.at(0).text() == '';
+  },
+
   setText: function(text, block) {
     if (text != block.text()) {
       block.setText(text);
@@ -70,7 +74,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       // Mark it up
       block.markup(startOffset, endOffset, type);
     }
-    
+
     this.trigger('changed');
   },
 

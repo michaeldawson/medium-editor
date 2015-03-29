@@ -6,6 +6,10 @@
 
 MediumEditor.DocumentView = MediumEditor.View.extend({
 
+  CLASS_NAME:         'medium-editor-document',
+
+  BLANK_CLASS_NAME:   'medium-editor-document-blank',
+
   // ----------------------------------------------
   //  Constructor
   // ----------------------------------------------
@@ -41,6 +45,7 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
 
   _render: function() {
     this._el.innerHTML = MediumEditor.ModelDOMMapper.toHTML(this._model);
+    this._el.className = [this.CLASS_NAME, this._model.isBlank() ? this.BLANK_CLASS_NAME : ''].join(' ');
   },
 
 });

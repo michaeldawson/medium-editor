@@ -176,7 +176,12 @@ MediumEditor.EditorView = MediumEditor.View.extend({
           } else if (selectionModel._startIx == 0 && selectionModel._startOffset == 0) {
 
             // At offset zero in the first block of
-            // the document - do nothing.
+            // the document. If it's empty and not
+            // a paragraph, convert it, otherwise
+            // do nothing.
+            if (startBlock.isEmpty() && !startBlock.isParagraph()) {
+              this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+            }
             e.preventDefault();
 
           } else if (selectionModel._startOffset == 0 && prevBlock.isDivider()) {
