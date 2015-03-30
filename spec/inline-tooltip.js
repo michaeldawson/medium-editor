@@ -51,7 +51,7 @@ describe('Caret at the start of a blank quote block', function() {
 
 describe('Caret at the start of a blank header', function() {
   it('should show the inline tooltip', function() {
-
+    
   });
 });
 

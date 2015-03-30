@@ -42,7 +42,7 @@ describe('Typing "1. " at the start of a paragraph with content', function() {
 
     var selectionDOM = page.selectionDOM();
     expect(selectionDOM.startNodeValue).toEqual('This is a test paragraph');
-    expect(selectionDOM.startOffset).toEqual(3);
+    expect(selectionDOM.startOffset).toEqual(0);
   });
 });
 

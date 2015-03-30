@@ -4,24 +4,15 @@
 //  Models the selection. This never gets
 //  persisted - it's only really a model because
 //  other models (such as document) rely upon it.
+//  Currently supported types:
+//
+//    NULL
+//    CARET
+//    RANGE
+//    MEDIA
 // ------------------------------------------------
 
 MediumEditor.SelectionModel = MediumEditor.Model.extend({
-
-  // ----------------------------------------------
-  //  Selection Types
-  // ----------------------------------------------
-  //  The types of selection. This is
-  //  automatically determined when new selection
-  //  attributes are set.
-  // ----------------------------------------------
-
-  TYPES: {
-    NULL:                 {},
-    CARET:                {},
-    RANGE:                {},
-    MEDIA:                {}
-  },
 
   // ----------------------------------------------
   //  Constructor
@@ -38,24 +29,44 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   // ----------------------------------------------
 
   isNull: function() {
-    return this._type == this.TYPES.NULL;
+    return this._type == 'NULL';
   },
 
   isCaret: function() {
-    return this._type == this.TYPES.CARET;
+    return this._type == 'CARET';
   },
 
   isRange: function() {
-    return this._type == this.TYPES.RANGE;
+    return this._type == 'RANGE';
   },
 
   isMedia: function() {
-    return this._type == this.TYPES.MEDIA;
+    return this._type == 'MEDIA';
   },
 
   // ----------------------------------------------
   //  Accessors
   // ----------------------------------------------
+
+  type: function() {
+    return this._type;
+  },
+
+  startIx: function() {
+    return this._startIx;
+  },
+
+  endIx: function() {
+    return this._endIx;
+  },
+
+  startOffset: function() {
+    return this._startOffset;
+  },
+
+  endOffset: function() {
+    return this._endOffset;
+  },
 
   startBlock: function() {
     return this.isNull() ? null : this._document.blocks().at(this._startIx);
@@ -70,11 +81,7 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   },
 
   spansBlocks: function() {
-    return this._endIx > this._startIx;
-  },
-
-  entireBlock: function() {
-    return this.withinOneBlock() && this._startOffset == 0 && this._endOffset == this.startBlock().text().length;
+    return !this.withinOneBlock();
   },
 
   // ----------------------------------------------
@@ -85,13 +92,22 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes({});
   },
 
+  media: function(ix) {
+    this.caret(ix, 0);
+  },
+
+  caret: function(ix, offset, options) {
+    this._setAttributes({
+      startIx:      ix,
+      startOffset:  offset,
+      endIx:        ix,
+      endOffset:    offset,
+    });
+  },
+
   set: function(attrs, options) {
     this._setAttributes(attrs, options);
   },
-
-  // ----------------------------------------------
-  //  Utility Methods
-  // ----------------------------------------------
 
   _setAttributes: function(attrs, options) {
 
@@ -103,16 +119,6 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     // infinite loops in their handlers).
     if (typeof options === 'undefined') options = {};
     if (typeof options['triggerEvent'] === 'undefined') options['triggerEvent'] = true;
-
-    // Shorthand notation for caret selections
-    if (typeof attrs['ix'] !== 'undefined') {
-      attrs['startIx'] = attrs['ix'];
-      attrs['endIx'] = attrs['ix'];
-    }
-    if (typeof attrs['offset'] !== 'undefined') {
-      attrs['startOffset'] = attrs['offset'];
-      attrs['endOffset'] = attrs['offset'];
-    }
 
     if (attrs['startIx']      != this._startIx ||
         attrs['startOffset']  != this._startOffset ||
@@ -132,13 +138,13 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
   // based upon the attributes
   _determineType: function() {
     if (this._startIx === undefined) {
-      this._type = this.TYPES.NULL;
-    } else if (this._document.blocks().at(this._startIx).isMedia()) {
-      this._type = this.TYPES.MEDIA;
+      this._type = 'NULL';
+    } else if (this._startOffset == 0 && this._document.blocks().at(this._startIx).isMedia()) {
+      this._type = 'MEDIA';
     } else if (this._startIx == this._endIx && this._startOffset == this._endOffset) {
-      this._type = this.TYPES.CARET;
+      this._type = 'CARET';
     } else {
-      this._type = this.TYPES.RANGE;
+      this._type = 'RANGE';
     }
   },
 

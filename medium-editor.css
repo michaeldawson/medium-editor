@@ -95,6 +95,16 @@
 .medium-editor-document blockquote em {
   font-style: normal;
 }
+.medium-editor-document blockquote.pull-quote {
+  font-size: 32px;
+  line-height: 1.4em;
+  margin: 48px -160px;
+  border: none;
+  padding: 0;
+  text-align: center;
+}
+
+
 .medium-editor-document li {
   margin-bottom: 12px;
   margin-left: 30px;
@@ -111,6 +121,8 @@
 .medium-editor-document figure {
   text-align: center;
   margin: 60px 0;
+  color: transparent;   /* Hides the cursor */
+  cursor: default;
 }
 .medium-editor-document figure img {
   max-width: 100%;
@@ -147,6 +159,31 @@
   max-width: 700px;
   margin: 0 auto;
 }
+
+.medium-editor-document .left-align {
+  width: 50%;
+  float: left;
+  margin-top: 15px;
+  margin-right: 30px;
+  margin-bottom: 10px;
+}
+
+@media only screen and (min-width: 992px) {
+  .medium-editor-document .left-outset {
+    width: 75%;
+    float: left;
+    margin-top: 15px;
+    margin-right: 30px;
+    margin-bottom: 10px;
+    margin-left: -160px;
+  }
+}
+
+.medium-editor-document .layout-full-width figure {
+  margin-top: 80px;
+  margin-bottom: 80px;
+}
+
 
 /* ------------------------------------------------
     Highlight Menu

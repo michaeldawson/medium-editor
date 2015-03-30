@@ -86,6 +86,10 @@ MediumEditor.MVC = Class.extend({
         listeners[i].apply(this, args);
       }
     }
+  },
+
+  el: function() {
+    return this._el;
   }
 });
 

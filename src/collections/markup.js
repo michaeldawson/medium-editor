@@ -50,7 +50,7 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
   // like other markups. If the hrefs are different,
   // the new href is applied and subsumes the
   // existing range of any overlapping anchors.
-  //
+
   add: function(item) {
 
     // Get markups of the same type and sort
@@ -101,8 +101,7 @@ MediumEditor.MarkupCollection = MediumEditor.Collection.extend({
   // Returns true if the given range is entirely
   // marked up as the given type, otherwise false.
   isRangeMarkedUpAs: function(type, startOffset, endOffset) {
-    var temp = new MediumEditor.MarkupModel({ type: type, start: 0, end: 1 });
-    var items = this._itemsOfType(temp.type());
+    var items = this._itemsOfType(type);
     for(var i = 0; i < items.length; i++) {
       var item = items[i];
       if (item.isAnchor()) {

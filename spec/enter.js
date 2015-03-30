@@ -176,6 +176,35 @@ describe('Highlighting over multiple list items and hitting enter', function() {
   });
 });
 
+describe('Range selecting within a block then hitting enter', function() {
+  it('should remove the highlighted text and split the block', function() {
+    var page = new TestPage();
+    page.get();
+    var doc = $('.medium-editor-document');
+    doc.sendKeys("Hello");
+    doc.sendKeys(
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.NULL
+    );
+    doc.sendKeys(protractor.Key.ENTER);
+
+    expect(doc.all(by.css('p')).count()).toEqual(2);
+    expect(doc.all(by.css('p')).get(0).getText()).toEqual('He');
+    expect(doc.all(by.css('p')).get(1).getText()).toEqual('o');
+
+    var selectionModel = page.selectionModel();
+    expect(selectionModel.startIx).toEqual(1);
+    expect(selectionModel.startOffset).toEqual(0);
+
+    var selectionDOM = page.selectionDOM();
+    expect(selectionDOM.startNodeValue).toEqual('o');
+    expect(selectionDOM.startOffset).toEqual(0);
+  });
+});
+
 describe('Setting selection on a single block starting at offset zero, then hitting enter', function() {
   it('should remove the highlighted text and insert the remaining text on a new block below', function() {
     var page = new TestPage();

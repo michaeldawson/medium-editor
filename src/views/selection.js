@@ -9,6 +9,8 @@
 
 MediumEditor.SelectionView = MediumEditor.View.extend({
 
+  SELECTED_MEDIA_CLASS: 'medium-editor-media-selected',
+
   // ----------------------------------------------
   //  Constructor
   // ----------------------------------------------
@@ -30,6 +32,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
   _onSelectionChanged: function(selection, caller) {
     if (caller != this) this.setOnBrowser();
+    this.updateMediaSelections();
   },
 
   // ----------------------------------------------
@@ -52,6 +55,14 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
   //  Instance Methods
   // ----------------------------------------------
 
+  updateMediaSelections: function() {
+    var existing = this._editor._el.querySelector('.' + this.SELECTED_MEDIA_CLASS);
+    if (existing) existing.className = existing.className.replace(new RegExp(this.SELECTED_MEDIA_CLASS,"g"), '');
+    if (this._model.isMedia()) {
+      this.startBlockElement().className += ' ' + this.SELECTED_MEDIA_CLASS;
+    }
+  },
+
   // Set the selection in the browser
   setOnBrowser: function() {
     if (this._model.isNull()) {
@@ -60,12 +71,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
     } else if (this._model.isMedia()) {
 
-      // Keep a handle to the selected media block
-      // so we can easily unset it later
-      this._selectedMediaEl = MediumEditor.ModelDOMMapper.getBlockElementFromIndex(this._document()._el, this._model._startIx);
-      this._selectedMediaEl.className = 'medium-editor-media-selected';
-      this.deselect();
-      this._updateRectangle(this._selectedMediaEl);
+      // TODO
 
     } else {
 
@@ -138,21 +144,7 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     // If there's nothing selected according to
     // the browser ...
     if (!startNode) {
-
-      // Check if media is selected
-      if (this._selectedMediaEl) {
-
-        // Yep. Update the model.
-        var ix = MediumEditor.ModelDOMMapper.getIndexFromBlockElement(this._selectedMediaEl);
-        this._model.set({
-          startIx:      ix
-        }, options);
-
-      } else {
-
-        // Nup. Nothing is selected.
-        this._model.null();
-      }
+      this._model.null();
       return;
     }
 
@@ -166,12 +158,6 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
     // offsets, in model space.
     var startPosition = MediumEditor.ModelDOMMapper.domSpaceToModelSpace(startNode, startOffset, range, true);
     var endPosition = MediumEditor.ModelDOMMapper.domSpaceToModelSpace(endNode, endOffset, range, false);
-
-    // Special case - paragraph selecting.
-    if (endPosition.ix == startPosition.ix + 1 && endPosition.offset == 0) {
-      endPosition.ix = startPosition.ix;
-      endPosition.offset = this._editor._model.blocks().at(startPosition.ix).text().length;
-    }
 
     // Update the rectangle
     this._updateRectangle(range);

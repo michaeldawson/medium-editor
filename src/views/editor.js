@@ -19,30 +19,30 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this._el.className = 'medium-editor';
 
     // Create the selection model and view
-    var selectionModel = new MediumEditor.SelectionModel({ document: this._model });
-    this._selection = new MediumEditor.SelectionView({ model: selectionModel, editor: this });
+    this._selectionModel = new MediumEditor.SelectionModel({ document: this._model });
+    this._selection = new MediumEditor.SelectionView({ model: this._selectionModel, editor: this });
 
     // Add a document view as a child
     this._document = new MediumEditor.DocumentView({ model: this._model, editor: this });
-    this._el.appendChild(this._document._el);
+    this._el.appendChild(this._document.el());
 
     // Add the inline tooltip menu
     this._inlineTooltip = new MediumEditor.InlineTooltipMenuView({ model: this._model, editor: this });
-    this._el.appendChild(this._inlineTooltip._el);
+    this._el.appendChild(this._inlineTooltip.el());
 
     // Add the highlight menu
     this._highlightMenu = new MediumEditor.HighlightMenuView({ model: this._model, editor: this });
-    this._el.appendChild(this._highlightMenu._el);
+    this._el.appendChild(this._highlightMenu.el());
 
     // Add event handlers. We centralise event
     // handling here then delegate out to the
     // document view, selection, inline tooltip and
     // hover menu because the order of those
     // handlers is important.
-    this.on('keyup', this._document._el, this._onKeyUp.bind(this));
-    this.on('keydown', this._document._el, this._onKeyDown.bind(this));
+    this.on('keyup', this._document.el(), this._onKeyUp.bind(this));
+    this.on('keydown', this._document.el(), this._onKeyDown.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));
-    this.on('mousedown', this._document._el, this._onMouseDown.bind(this));
+    this.on('paste', this._document.el(), this._onPaste.bind(this));
   },
 
   // Listen for normal editing changes. Let them
@@ -62,41 +62,43 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // trigger it further down.
     this._selection.determineFromBrowser({ triggerEvent: false });
 
-    // Flush the changes through
-    // the pipeline and handle special cases like
-    // lists and captions.
-    var selectionModel = this._selection.model();
-    var selectionModelBlock = selectionModel.startBlock();
+    // Flush the changes through the pipeline and
+    // handle special cases like lists and captions.
+    var block = this._selectionModel.startBlock();
     var text = this._selection.startBlockElement().innerText;
     if (text == "\n") text = "";
-    if (selectionModelBlock.isParagraph() && text.match(/^1\.\s/)) {
-      this._model.changeBlockType('ORDERED_LIST_ITEM', { text: text.substring(3) }, selectionModel);
-      selectionModel.set({
-        ix: selectionModel._startIx,     // The offset has now changed because we stripped out "1. "
-        offset: 0
-      }, { triggerEvent: false });
-    } else if (selectionModelBlock.isParagraph() && text.match(/^\*\s/)) {
-      this._model.changeBlockType('UNORDERED_LIST_ITEM', { text: text.substring(2) }, selectionModel);
-      selectionModel.set({
-        ix: selectionModel._startIx,     // The offset has now changed because we stripped out "* "
-        offset: 0
-      }, { triggerEvent: false });
+
+    if (block.isParagraph() && text.match(/^1\.\s/)) {
+
+      // Paragraphs starting with '1. ' - convert
+      // to a list item
+      block.setType('ORDERED_LIST_ITEM', { text: text.substring(3) });
+      this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
+
+    } else if (block.isParagraph() && text.match(/^\*\s/)) {
+
+      // Paragraphs starting with '* ' - convert
+      // to a list item
+      block.setType('UNORDERED_LIST_ITEM', { text: text.substring(2) });
+      this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
+
     } else {
-      this._model.setText(text, selectionModelBlock);
+
+      // Otherwise just flush through
+      block.setText(text);
     }
 
     // Now trigger the selection event - the model
     // is up to date.
-    selectionModel.trigger('changed', selectionModel, this._selection);
+    this._selectionModel.trigger('changed', this._selectionModel, this._selection);
   },
 
   // Intercept key events which may modify the
   // block structure, such as enter or backspace.
   _onKeyDown: function(e) {
 
-    var selectionModel = this._selection.model();
-    var startBlock = selectionModel.startBlock();
-    var endBlock = selectionModel.endBlock();
+    var startBlock = this._selectionModel.startBlock();
+    var endBlock = this._selectionModel.endBlock();
 
     switch(e.which) {
 
@@ -110,8 +112,8 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         // Override default behaviour, otherwise
         // contenteditable uses <b> and <i>
         if (e.metaKey) {
-          if (selectionModel.isRange()) {
-            this._model.markup(e.which == 66 ? 'STRONG' : 'EMPHASIS', selectionModel);
+          if (this._selectionModel.isRange()) {
+            this._model.toggleMarkup(e.which == 66 ? 'STRONG' : 'EMPHASIS', this._selectionModel);
           }
           e.preventDefault();
         }
@@ -122,39 +124,20 @@ MediumEditor.EditorView = MediumEditor.View.extend({
       // ------------------------------------------
 
       case 8:
-        if (selectionModel.isMedia()) {
+        if (this._selectionModel.isMedia()) {
 
           // Media selection. Change it to a
           // paragraph.
-          this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
-          selectionModel.set({
-            ix:      selectionModel._startIx,   // TODO - we could get rid of this if we defaulted startOffset on media selects
-            offset:  0,
-          });
+          startBlock.setType('PARAGRAPH');
           e.preventDefault();
 
-        } else if (selectionModel.isRange()) {
+        } else if (this._selectionModel.isRange()) {
 
-          if (selectionModel.spansBlocks()) {
+          if (this._selectionModel.spansBlocks()) {
 
             // Multiple blocks. Kill the
             // highlighted text.
             this._removeSelectedText();
-            e.preventDefault();
-
-          } else if (selectionModel.entireBlock()) {
-
-            // If the entire block is selected,
-            // clear it. Ordinarily we'd let
-            // contenteditable handle this, but
-            // because it's a whole-block selection,
-            // backspace would ordinarily remove
-            // the block rather than clear it.
-            this._model.setText('', startBlock);
-            selectionModel.set({
-              ix:      selectionModel._startIx,
-              offset:  0,
-            });
             e.preventDefault();
 
           } else {
@@ -163,70 +146,59 @@ MediumEditor.EditorView = MediumEditor.View.extend({
             // contenteditable handle it.
           }
 
-        } else if (selectionModel.isCaret()) {
+        } else if (this._selectionModel.isCaret()) {
 
-          var prevBlock = this._model.blocks().at(selectionModel._startIx - 1);
-          if (startBlock.isListItem() && selectionModel._startOffset == 0) {
+          var prevBlock = this._model.blocks().at(this._selectionModel.startIx() - 1);
+          if (startBlock.isListItem() && this._selectionModel.startOffset() == 0) {
 
             // List item and selection is at offset
             // zero. Change it to a paragraph.
-            this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+            startBlock.setType('PARAGRAPH');
             e.preventDefault();
 
-          } else if (selectionModel._startIx == 0 && selectionModel._startOffset == 0) {
+          } else if (this._selectionModel.startIx() == 0 && this._selectionModel.startOffset() == 0) {
 
             // At offset zero in the first block of
             // the document. If it's empty and not
             // a paragraph, convert it, otherwise
             // do nothing.
             if (startBlock.isEmpty() && !startBlock.isParagraph()) {
-              this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+              startBlock.setType('PARAGRAPH');
             }
             e.preventDefault();
 
-          } else if (selectionModel._startOffset == 0 && prevBlock.isDivider()) {
+          } else if (this._selectionModel.startOffset() == 0 && prevBlock.isDivider()) {
 
             // At offset zero and previous block is
             // a divider. Kill it.
-            this._model.removeBlockAt(selectionModel._startIx - 1);
-            selectionModel.set({
-              ix:      selectionModel._startIx - 1,
-              offset:  0,
-            });
+            this._model.removeBlockAt(this._selectionModel.startIx() - 1);
+            this._selectionModel.set(this._selectionModel.startIx() - 1, 0);
             e.preventDefault();
 
-          } else if (selectionModel._startOffset == 0 && prevBlock.isMedia()) {
+          } else if (this._selectionModel.startOffset() == 0 && prevBlock.isMedia()) {
 
             // Previous block is media. Select it.
-            selectionModel.set({
-              ix:      selectionModel._startIx - 1,
-            });
+            this._selectionModel.media(this._selectionModel.startIx() - 1);
             e.preventDefault();
 
-          } else if (selectionModel._startOffset == 0 && prevBlock.isParagraph() && prevBlock.isEmpty()) {
+          } else if (this._selectionModel.startOffset() == 0 && prevBlock.isParagraph() && prevBlock.isEmpty()) {
 
             // Previous block is an empty paragraph.
             // Kill it.
-            selectionModel.set({
-              ix:       selectionModel._startIx - 1,
-              offset:   0
-            });
-            this._model.removeBlockAt(selectionModel._startIx);
+            this._selectionModel.caret(this._selectionModel.startIx() - 1, 0);
+            this._model.removeBlockAt(this._selectionModel.startIx());
             e.preventDefault();
 
-          } else if (selectionModel._startOffset == 0) {
+          } else if (this._selectionModel.startOffset() == 0) {
 
             // Any other scenario where we're at
             // offset zero - merge the block upward
             // into the previous.
             var prevBlockText = prevBlock.text();
             var newText = prevBlockText + startBlock.text();
-            this._model.setText(newText, prevBlock);
-            selectionModel.set({
-              ix:       selectionModel._startIx - 1,
-              offset:   prevBlockText.length
-            });
-            this._model.removeBlockAt(selectionModel._startIx + 1);
+            prevBlock.setText(newText);
+            this._selectionModel.caret(this._selectionModel.startIx() - 1, prevBlockText.length);
+            this._model.removeBlockAt(this._selectionModel.startIx() + 1);
             e.preventDefault();
           }
         }
@@ -240,18 +212,20 @@ MediumEditor.EditorView = MediumEditor.View.extend({
         if (!e.ctrlKey) break;
       case 13:
 
-        if (selectionModel.isRange() && (selectionModel.spansBlocks() || selectionModel.entireBlock())) {
+        if (this._selectionModel.isRange()) {
 
           // Remove the selected text, but then
-          // allow code to continue below
-          this._removeSelectedText();
+          // allow code to continue below. If it's
+          // a paragraph selection, just clear the
+          // paragraph instead of killing it.
+          this._removeSelectedText({ clearIfParagraphSelection: true });
         }
 
-        if (selectionModel.isCaret() && startBlock.isListItem() && startBlock.isEmpty()) {
+        if (this._selectionModel.isCaret() && startBlock.isListItem() && startBlock.isEmpty()) {
 
           // If we're on a blank list item,
           // convert it to a paragraph
-          this._model.changeBlockType('PARAGRAPH', {}, selectionModel);
+          startBlock.setType('PARAGRAPH');
           e.preventDefault();
 
         } else {
@@ -268,35 +242,29 @@ MediumEditor.EditorView = MediumEditor.View.extend({
           // placed above the current block, not
           // below.
 
-          if (selectionModel._startOffset == 0) {
+          if (this._selectionModel.startOffset() == 0) {
 
             // If we're at offset 0, we're always
             // inserting a paragraph above, unless
             // it's a list item
-            this._model.insertBlockAt(!startBlock.isListItem() ? 'PARAGRAPH' : startBlock.type(), selectionModel._startIx);
+            this._model.insertBlockAt(!startBlock.isListItem() ? 'PARAGRAPH' : startBlock.type(), this._selectionModel.startIx());
 
             // Give the old block focus
-            selectionModel.set({
-              ix:      selectionModel._startIx + 1,
-              offset:  0
-            });
+            this._selectionModel.caret(this._selectionModel.startIx() + 1, 0);
             e.preventDefault();
 
           } else {
 
             var text = startBlock.text();
-            var textBeforeCaret = text.substring(0, selectionModel._startOffset);
-            var textAfterCaret = text.substring(selectionModel._endOffset);
+            var textBeforeCaret = text.substring(0, this._selectionModel.startOffset());
+            var textAfterCaret = text.substring(this._selectionModel.endOffset());
             var newType = textAfterCaret != '' || startBlock.isListItem() ? startBlock.type() : 'PARAGRAPH';
 
-            this._model.insertBlockAt(newType, selectionModel._startIx + 1, { text: textAfterCaret });
-            this._model.setText(textBeforeCaret, startBlock);
+            this._model.insertBlockAt(newType, this._selectionModel.startIx() + 1, { text: textAfterCaret });
+            startBlock.setText(textBeforeCaret);
 
             // Put focus on the new child paragraph
-            selectionModel.set({
-              ix:      selectionModel._startIx + 1,
-              offset:  0
-            });
+            this._selectionModel.caret(this._selectionModel.startIx() + 1, 0);
             e.preventDefault();
           }
         }
@@ -336,33 +304,43 @@ MediumEditor.EditorView = MediumEditor.View.extend({
           93,          // Select key
         ];
 
-        if (selectionModel.isRange() && (selectionModel.entireBlock() || selectionModel.spansBlocks()) && systemKeys.indexOf(e.which) < 0) {
-          this._removeSelectedText();
+        if (this._selectionModel.isRange() && this._selectionModel.spansBlocks() && systemKeys.indexOf(e.which) < 0) {
+          this._removeSelectedText({ clearIfParagraphSelection: true });
         }
 
         break;
     }
   },
 
-  // If the selection is a range which spans more
-  // than one block, this method removes the
-  // selected text.
-  _removeSelectedText: function() {
-    var selectionModel = this._selection.model();
-    if (!selectionModel.isRange() || !(selectionModel.spansBlocks() || selectionModel.entireBlock())) return;
+  // If the selection is a range, this method
+  // removes the selected text.
+  _removeSelectedText: function(options) {
+
+    options = typeof options == 'undefined' ? {} : options;
+    options['clearIfParagraphSelection'] = !!(options['clearIfParagraphSelection']);
+
+    if (!this._selectionModel.isRange()) return;
 
     // Grab the blocks
-    var startBlock = selectionModel.startBlock();
-    var endBlock = selectionModel.endBlock();
+    var startBlock = this._selectionModel.startBlock();
+    var endBlock = this._selectionModel.endBlock();
+    var startIx = this._selectionModel.startIx();
+    var endIx = this._selectionModel.endIx();
+    var startOffset = this._selectionModel.startOffset();
+    var endOffset = this._selectionModel.endOffset();
+
+    if (options['clearIfParagraphSelection'] && endIx == (startIx + 1) && endOffset == 0) {
+      endIx = startIx;
+      endOffset = startBlock.text().length;
+      endBlock = startBlock;
+    }
 
     // Determine the new block text
-    var newStartBlockText = startBlock.text().substr(0, selectionModel._startOffset);
-    newStartBlockText += endBlock.text().substr(selectionModel._endOffset);
-    var startIx = selectionModel._startIx;
-    var endIx = selectionModel._endIx;
+    var newStartBlockText = startBlock.text().substr(0, startOffset);
+    newStartBlockText += endBlock.text().substr(endOffset);
 
     // Set the new block text
-    this._model.setText(newStartBlockText, startBlock);
+    startBlock.setText(newStartBlockText);
 
     // Change the selection to a caret (important
     // we do this before removing blocks, otherwise
@@ -370,10 +348,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // model will bubble up to the document view,
     // which will try to set the selection and the
     // end block may not exist anymore)
-    selectionModel.set({
-      ix:       selectionModel._startIx,
-      offset:   selectionModel._startOffset
-    });
+    this._selectionModel.caret(startIx, startOffset);
 
     // Remove the remaining blocks
     for(var i = endIx; i > startIx; i--) {
@@ -392,15 +367,30 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     }.bind(this), 10);
   },
 
-  _onMouseDown: function(e) {
-
-    // Did the user click on an image/video? If so,
-    // set selection on it.
-    if (e.target.tagName.toLowerCase() == 'img' &&
-        e.target.parentNode.tagName.toLowerCase() == 'figure') {
-      var element = e.target.parentNode;
-      var ix = this._selection._getIndexFromBlockElement(element);
-      this._selection.model().set({ startIx: ix });
+  _onPaste: function(e) {
+    e.preventDefault();
+    if (e && e.clipboardData && e.clipboardData.getData) {
+      if (/text\/plain/.test(e.clipboardData.types)) {
+        var text = e.clipboardData.getData('text/plain');
+        var blocks = text.split("\n");
+        var toInsert = [];
+        for(var i = 0; i < blocks.length; i++) {
+          var block = blocks[i];
+          if (block != '' && block != null) {
+            toInsert.push(block);
+          }
+        }
+        for(var i = 0; i < toInsert.length; i++) {
+          var block = toInsert[i];
+          if (i == 0) {
+            var startBlock = this._selectionModel.startBlock();
+            startBlock.setText(startBlock.text() + block);
+          } else {
+            this._model.insertBlockAt('PARAGRAPH', this._selectionModel.startIx() + 1 + i, { text: block });
+          }
+        }
+        this._selection.model().caret(this._selectionModel.startIx() + toInsert.length - 1, toInsert[toInsert.length - 1].length);
+      }
     }
   },
 

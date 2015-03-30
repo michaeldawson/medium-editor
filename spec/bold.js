@@ -108,7 +108,7 @@ describe('Pressing cmd + b while highlighting bold text', function() {
     );
 
     expect(doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('test sentence');
-    expect(element.all(by.css('.medium-editor-highlight-menu button')).get(0).getAttribute('class')).toEqual('');
+    expect(element.all(by.css('.medium-editor-highlight-menu button')).get(0).getAttribute('class')).toEqual(null);
   });
 });
 

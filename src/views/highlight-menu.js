@@ -8,16 +8,6 @@
 
 MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
-  BUTTONS: {
-    'strong':     'B',
-    'emphasis':   'i',
-    'heading1':   'H1',
-    'heading2':   'H2',
-    'heading3':   'H3',
-    'quote':      '“'
-    // 'anchor':     '<i class="ion-link"></i>'
-  },
-
   CLASS_NAME:                 'medium-editor-highlight-menu',
 
   ACTIVE_CLASS_NAME:          'medium-editor-highlight-menu-active',
@@ -25,6 +15,259 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   POSITION_UNDER_CLASS_NAME:  'medium-editor-highlight-menu-under',
 
   BUTTON_ACTIVE_CLASS_NAME:   'medium-editor-highlight-menu-button-active',
+
+  BUTTONS: {
+
+    // --------------------------------------------
+    //  Strong (bold) button
+    // --------------------------------------------
+
+    'STRONG': {
+      buttonHTML: function() {
+        return 'B';
+      },
+      isVisible: function() {
+        return this._allBlocksSupportMarkup('STRONG');
+      },
+      buttonClass: function() {
+        if (this._markedUpAs('STRONG')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.toggleMarkup('STRONG', this._selectionModel());
+      }
+    },
+
+    // --------------------------------------------
+    //  Emphasis (italic) button
+    // --------------------------------------------
+
+    'EMPHASIS': {
+      buttonHTML: function() {
+        return 'i';
+      },
+      isVisible: function() {
+        return this._allBlocksSupportMarkup('EMPHASIS');
+      },
+      buttonClass: function() {
+        if (this._markedUpAs('EMPHASIS')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.toggleMarkup('EMPHASIS', this._selectionModel());
+      }
+    },
+
+    // --------------------------------------------
+    //  Heading 1 button
+    // --------------------------------------------
+
+    'HEADING1': {
+      buttonHTML: function() {
+        return 'H1';
+      },
+      isVisible: function() {
+        return this._noMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allBlocksAre('HEADING1')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        if (this._allBlocksAre('HEADING1')) {
+          this._model.setType('PARAGRAPH', this._selectionModel());
+        } else {
+          this._model.setType('HEADING1', this._selectionModel());
+        }
+      }
+    },
+
+    // --------------------------------------------
+    //  Heading 2 button
+    // --------------------------------------------
+
+    'HEADING2': {
+      buttonHTML: function() {
+        return 'H2';
+      },
+      isVisible: function() {
+        return this._noMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allBlocksAre('HEADING2')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        if (this._allBlocksAre('HEADING2')) {
+          this._model.setType('PARAGRAPH', this._selectionModel());
+        } else {
+          this._model.setType('HEADING2', this._selectionModel());
+        }
+      }
+    },
+
+    // --------------------------------------------
+    //  Heading 3 button
+    // --------------------------------------------
+
+    'HEADING3': {
+      buttonHTML: function() {
+        return 'H3';
+      },
+      isVisible: function() {
+        return this._noMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allBlocksAre('HEADING3')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        if (this._allBlocksAre('HEADING3')) {
+          this._model.setType('PARAGRAPH', this._selectionModel());
+        } else {
+          this._model.setType('HEADING3', this._selectionModel());
+        }
+      }
+    },
+
+    // --------------------------------------------
+    //  Quote button
+    // --------------------------------------------
+
+    'QUOTE': {
+      buttonHTML: function() {
+        return '“';
+      },
+      isVisible: function() {
+        return this._noMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allBlockQuotes()) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else if (this._allPullQuotes()) {
+          return this.BUTTON_ACTIVE_CLASS_NAME + ' medium-editor-highlight-menu-button-pull-quote';
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        if (this._allBlockQuotes()) {
+          this._model.setLayout('PULL-QUOTE', this._selectionModel());
+        } else if (this._allPullQuotes()) {
+          this._model.setType('PARAGRAPH', this._selectionModel());
+        } else {
+          this._model.setType('QUOTE', this._selectionModel());
+        }
+      }
+    },
+
+    // --------------------------------------------
+    //  Left-align media
+    // --------------------------------------------
+
+    'LEFT-ALIGN': {
+      buttonHTML: function() {
+        return 'L';
+      },
+      isVisible: function() {
+        return this._allMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allLayoutsAre('LEFT-ALIGN')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.setLayout('LEFT-ALIGN', this._selectionModel());
+      }
+    },
+
+    // --------------------------------------------
+    //  Left-outset media
+    // --------------------------------------------
+
+    'LEFT-OUTSET': {
+      buttonHTML: function() {
+        return 'LO';
+      },
+      isVisible: function() {
+        return this._allMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allLayoutsAre('LEFT-OUTSET')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.setLayout('LEFT-OUTSET', this._selectionModel());
+      }
+    },
+
+    // --------------------------------------------
+    //  Single-column media
+    // --------------------------------------------
+
+    'SINGLE-COLUMN': {
+      buttonHTML: function() {
+        return 'S';
+      },
+      isVisible: function() {
+        return this._allMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allLayoutsAre('SINGLE-COLUMN')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.setLayout('SINGLE-COLUMN', this._selectionModel());
+      }
+    },
+
+    // --------------------------------------------
+    //  Full-width media
+    // --------------------------------------------
+
+    'FULL-WIDTH': {
+      buttonHTML: function() {
+        return 'F';
+      },
+      isVisible: function() {
+        return this._allMediaBlocks();
+      },
+      buttonClass: function() {
+        if (this._allLayoutsAre('FULL-WIDTH')) {
+          return this.BUTTON_ACTIVE_CLASS_NAME;
+        } else {
+          return null;
+        }
+      },
+      onClick: function() {
+        this._model.setLayout('FULL-WIDTH', this._selectionModel());
+      }
+    }
+  },
 
   // ----------------------------------------------
   //  Constructor
@@ -49,8 +292,7 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   // ----------------------------------------------
 
   _onSelectionChanged: function() {
-    var selectionModel = this._selection().model();
-    if (selectionModel.isRange() || selectionModel.isMedia()) {
+    if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
       this._showAndPosition();
       this._updateButtonStates();
     } else {
@@ -59,29 +301,9 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   },
 
   _onDocumentChanged: function() {
-    var selectionModel = this._selection().model();
-    if (selectionModel.isRange() || selectionModel.isMedia()) {
+    if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
       this._updateButtonStates();
     }
-  },
-
-  _onButton: function(e) {
-    var action = e.currentTarget.getAttribute('data-action').toUpperCase();
-    var selectionModel = this._selection().model();
-    switch(action) {
-      case 'STRONG':
-      case 'EMPHASIS':
-        this._model.markup(action, selectionModel);
-        break;
-      case 'HEADING1':
-      case 'HEADING2':
-      case 'HEADING3':
-      case 'QUOTE':
-        var enabled = this._model.isSelectionWithinBlockType(action, selectionModel);
-        this._model.changeBlockType(enabled ? 'PARAGRAPH' : action, selectionModel);
-        break;
-    }
-    this._updateButtonStates();
   },
 
   // ----------------------------------------------
@@ -99,9 +321,9 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
       if (this.BUTTONS.hasOwnProperty(action)) {
         var button = document.createElement('button');
         button.type = 'button';
-        button.innerHTML = this.BUTTONS[action];
+        button.innerHTML = this.BUTTONS[action].buttonHTML();
         button.setAttribute('data-action', action);
-        this.on('click', button, this._onButton.bind(this));
+        this.on('click', button, this.BUTTONS[action].onClick.bind(this));
         this._el.appendChild(button);
       }
     }
@@ -138,24 +360,11 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
   },
 
   _updateButtonStates: function() {
-    var selectionModel = this._selection().model();
     for(var i = 0; i < this._el.childNodes.length; i++) {
       var button = this._el.childNodes[i];
-      var action = button.dataset.action.toUpperCase();
-      switch(action) {
-        case 'STRONG':
-        case 'EMPHASIS':
-          var enabled = this._model.isSelectionWithinMarkupType(action, selectionModel);
-          button.className = enabled ? this.BUTTON_ACTIVE_CLASS_NAME : '';
-          break;
-        case 'HEADING1':
-        case 'HEADING2':
-        case 'HEADING3':
-        case 'QUOTE':
-          var enabled = this._model.isSelectionWithinBlockType(action, selectionModel);
-          button.className = enabled ? this.BUTTON_ACTIVE_CLASS_NAME : '';
-          break;
-      }
+      var action = button.dataset.action;
+      button.style.display = this.BUTTONS[action].isVisible.bind(this)() ? 'inline-block' : 'none';
+      button.className = this.BUTTONS[action].buttonClass.bind(this)();
     }
   },
 
@@ -163,9 +372,79 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
     this._el.className = this.CLASS_NAME;
   },
 
-  // Shorthand
   _selection: function() {
     return this._editor.selection();
   },
+
+  _selectionModel: function() {
+    return this._selection().model();
+  },
+
+  // Do all the selected blocks support the given
+  // markup type?
+  _allBlocksSupportMarkup: function(type) {
+    return this._allBlocks(function(block) {
+      return block.supportsMarkupType(type);
+    });
+  },
+
+  _markedUpAs: function(type) {
+    var selModel = this._selectionModel();
+    return this._allBlocks(function(block,ix) {
+
+      // Determine the start and end offsets of the
+      // selection in this block
+      var startOffset = ix == selModel.startIx() ? selModel.startOffset() : 0;
+      var endOffset = ix == selModel.endIx() ? selModel.endOffset() : block.text().length;
+
+      // Is the range marked up as the given type?
+      return block.isRangeMarkedUpAs(type, startOffset, endOffset);
+    });
+  },
+
+  _noMediaBlocks: function() {
+    return this._allBlocks(function(block) {
+      return !block.isMedia();
+    });
+  },
+
+  _allMediaBlocks: function() {
+    return this._allBlocks(function(block) {
+      return block.isMedia();
+    });
+  },
+
+  _allBlockQuotes: function() {
+    return this._allBlocks(function(block) {
+      return block.isQuote() && block.layout() == 'SINGLE-COLUMN';
+    });
+  },
+
+  _allPullQuotes: function() {
+    return this._allBlocks(function(block) {
+      return block.isQuote() && block.layout() == 'PULL-QUOTE';
+    });
+  },
+
+  _allBlocksAre: function(type) {
+    return this._allBlocks(function(block) {
+      return block.type() == type;
+    });
+  },
+
+  _allLayoutsAre: function(type) {
+    return this._allBlocks(function(block) {
+      return block.layout() == type;
+    });
+  },
+
+  // Helper method to iterate all selected blocks
+  // and test them against a given function.
+  _allBlocks: function(func) {
+    for(var i = this._selectionModel().startIx(); i <= this._selectionModel().endIx(); i++) {
+      if (!func.bind(this)(this._model.blocks().at(i), i)) return false;
+    }
+    return true;
+  }
 
 });

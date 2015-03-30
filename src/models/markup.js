@@ -5,20 +5,14 @@
 //  emphasis), or links. They have start and end
 //  values, which correspond to the start and end
 //  character indices of the block to which they
-//  belong.
+//  belong. Currently supported types:
+//
+//    STRONG
+//    EMPHASIS
+//    ANCHOR
 // ------------------------------------------------
 
 MediumEditor.MarkupModel = MediumEditor.Model.extend({
-
-  // ----------------------------------------------
-  //  Markup Types
-  // ----------------------------------------------
-
-  TYPES: {
-    STRONG:               {},
-    EMPHASIS:             {},
-    ANCHOR:               {}
-  },
 
   // ----------------------------------------------
   //  Constructor
@@ -27,6 +21,22 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   init: function(attrs) {
     this._super(attrs);
     this._setAttributes(attrs);
+  },
+
+  // ----------------------------------------------
+  //  Type Queries
+  // ----------------------------------------------
+
+  isStrong: function() {
+    return this._type == 'STRONG';
+  },
+
+  isEmphasis: function() {
+    return this._type == 'EMPHASIS';
+  },
+
+  isAnchor: function() {
+    return this._type == 'ANCHOR';
   },
 
   // ----------------------------------------------
@@ -47,6 +57,20 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
 
   metadata: function() {    // Only relevant for anchors at this stage
     return this._metadata;
+  },
+
+  // Does this markup touch another?
+  touches: function(other) {
+    return this._start <= other._end && this._end >= other._start;
+  },
+
+  // Does this markup cover another?
+  covers: function(other) {
+    return this._start <= other._start && this._end >= other._end;
+  },
+
+  supportsMetadata: function() {
+    return this.isAnchor();
   },
 
   // ----------------------------------------------
@@ -70,49 +94,15 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
     }
   },
 
-  // ----------------------------------------------
-  //  Type Queries
-  // ----------------------------------------------
-
-  isStrong: function() {
-    return this._type == this.TYPES.STRONG;
-  },
-
-  isEmphasis: function() {
-    return this._type == this.TYPES.EMPHASIS;
-  },
-
-  isAnchor: function() {
-    return this._type == this.TYPES.ANCHOR;
-  },
-
-  // ----------------------------------------------
-  //  Instance Methods
-  // ----------------------------------------------
-
-  // Does this markup touch another?
-  touches: function(other) {
-    return this._start <= other._end && this._end >= other._start;
-  },
-
-  // Does this markup cover another?
-  covers: function(other) {
-    return this._start <= other._start && this._end >= other._end;
-  },
-
-  // ----------------------------------------------
-  //  Utilities
-  // ----------------------------------------------
-
   // Set the given attributes (and provides
   // defaults) and nulls any which aren't
   // appropriate for the type (e.g. metadata on a
   // strong markup)
   _setAttributes: function(attrs) {
-    this._type = typeof attrs['type'] == 'string' || attrs['type'] instanceof String ? this.TYPES[(attrs['type'] || 'STRONG').toUpperCase()] : attrs['type'];
+    this._type = attrs['type'] || 'STRONG';
     this._start = attrs['start'] || 0;
     this._end = attrs['end'] || 0;
-    this._metadata = this._typeSupportsMetadata() ? (attrs['metadata'] || {}) : null;
+    this._metadata = this.supportsMetadata() ? (attrs['metadata'] || {}) : null;
 
     // Swap start and end if end comes before start
     if (this._start > this._end) {
@@ -126,10 +116,6 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
     if (this._start == this._end) {
       throw 'Start and end points of markup must be separate';
     }
-  },
-
-  _typeSupportsMetadata: function() {
-    return  this._type == this.TYPES.ANCHOR;
   }
 
 });

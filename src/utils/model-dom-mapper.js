@@ -68,7 +68,7 @@ MediumEditor.ModelDOMMapper = {
         case model.isDivider():               tag = 'div'; break;     // Inner HTML is a hr, but we wrap it in a div so it can't be selected
       }
 
-      var openingTag = "<" + tag + ( !model.isText() ? ' contenteditable="false"' : '' ) + ">";
+      var openingTag = "<" + tag + ( model.isDivider() ? ' contenteditable="false"' : '' ) + ( this._layoutType(model.layout()) == 'class' ? ' class="' + model.layout().toLowerCase() + '"' : '' ) + ">";
       var closingTag = "</" + tag + ">";
       var html = openingTag + this.innerHTML(model) + closingTag;
       return html;
@@ -78,6 +78,7 @@ MediumEditor.ModelDOMMapper = {
       // Document model.
       var blocks = model.blocks();
       var toReturn = "";
+      var currentWrapper = null;
       for(var i = 0; i < blocks.size(); i++) {
 
         // Grab handles the previous, current and
@@ -86,13 +87,12 @@ MediumEditor.ModelDOMMapper = {
         var currentBlock = blocks.at(i);
         var nextBlock = i < (blocks.size() - 1) ? blocks.at(i + 1) : null;
 
-        // If this block has a different layout to
+        // If this block has a different wrapper to
         // the last, or is the first block, open
-        // the new layout
-        if (prevBlock == null || prevBlock.layout() != currentBlock.layout()) {
-          var layoutClass = currentBlock.layout();
-          layoutClass = layoutClass || "single-column";
-          toReturn += "<div class='layout-" + layoutClass + "'>";
+        // the new wrapper
+        if (prevBlock == null || (this._layoutType(currentBlock.layout()) == 'wrapper' && currentWrapper != currentBlock.layout())) {
+          toReturn += "<div class='layout-" + currentBlock.layout().toLowerCase() + "'>";
+          currentWrapper = currentBlock.layout();
         }
 
         // If this block is a list item and the
@@ -114,9 +114,9 @@ MediumEditor.ModelDOMMapper = {
           }
         }
 
-        // If this block has a different layout to
-        // the next, close the layout
-        if (nextBlock == null || nextBlock.layout() != currentBlock.layout()) {
+        // If this block has a different wrapper to
+        // the next, close the wrapper
+        if (nextBlock == null || (this._layoutType(nextBlock.layout()) == 'wrapper' && currentWrapper != nextBlock.layout())) {
           toReturn += "</div>";
         }
       }
@@ -157,7 +157,7 @@ MediumEditor.ModelDOMMapper = {
 
       // Add the caption (if it exists)
       if (model.metadata()['caption']) {
-        innerHTML += "<figcaption contenteditable='true'>" + model.metadata()['caption'] + "</figcaption>";
+        innerHTML += "<figcaption>" + model.metadata()['caption'] + "</figcaption>";
       }
 
       return innerHTML;
@@ -287,6 +287,11 @@ MediumEditor.ModelDOMMapper = {
     } else {
       return 0;
     }
+  },
+
+  // Layouts are either a wrapper of a class
+  _layoutType: function(layout) {
+    return layout == 'SINGLE-COLUMN' || layout == 'FULL-WIDTH' ? 'wrapper' : 'class';
   },
 
   _openingTag: function(model) {

@@ -5,33 +5,21 @@
 //  semantic components within, such as paragraphs,
 //  list items, images etc. They contain text,
 //  markups, metadata and layout settings.
+//  Currently supported types:
+//
+//    PARAGRAPH
+//    QUOTE
+//    HEADING1
+//    HEADING2
+//    HEADING3
+//    ORDERED_LIST_ITEM
+//    UNORDERED_LIST_ITEM
+//    DIVIDER
+//    IMAGE
+//    VIDEO
 // ------------------------------------------------
 
 MediumEditor.BlockModel = MediumEditor.Model.extend({
-
-  // ----------------------------------------------
-  //  Block Types
-  // ----------------------------------------------
-  //  Arguably heading could be done as a single
-  //  type, with the subtypes achieved as layouts,
-  //  but unlike other uses for layouts
-  //  (pullquotes, full-width images etc.),
-  //  different levels of headings are different
-  //  semantically.
-  // ----------------------------------------------
-
-  TYPES: {
-    PARAGRAPH:            {},
-    QUOTE:                {},
-    HEADING1:             {},
-    HEADING2:             {},
-    HEADING3:             {},
-    ORDERED_LIST_ITEM:    {},
-    UNORDERED_LIST_ITEM:  {},
-    DIVIDER:              {},
-    IMAGE:                {},
-    VIDEO:                {}
-  },
 
   // ----------------------------------------------
   //  Constructor
@@ -40,6 +28,73 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   init: function(attrs) {
     this._super(attrs);
     this._setAttributes(attrs);
+  },
+
+  // ----------------------------------------------
+  //  Type Queries
+  // ----------------------------------------------
+
+  isParagraph: function() {
+    return this._type == 'PARAGRAPH';
+  },
+
+  isQuote: function() {
+    return this._type == 'QUOTE';
+  },
+
+  isHeading1: function() {
+    return this._type == 'HEADING1';
+  },
+
+  isHeading2: function() {
+    return this._type == 'HEADING2';
+  },
+
+  isHeading3: function() {
+    return this._type == 'HEADING3';
+  },
+
+  isHeading: function() {
+    return this.isHeading1() ||
+           this.isHeading2() ||
+           this.isHeading3();
+  },
+
+  isOrderedListItem: function() {
+    return this._type == 'ORDERED_LIST_ITEM';
+  },
+
+  isUnorderedListItem: function() {
+    return this._type == 'UNORDERED_LIST_ITEM';
+  },
+
+  isDivider: function() {
+    return this._type == 'DIVIDER';
+  },
+
+  isImage: function() {
+    return this._type == 'IMAGE';
+  },
+
+  isVideo: function() {
+    return this._type == 'VIDEO';
+  },
+
+  isText: function() {
+    return this.isParagraph() ||
+           this.isQuote() ||
+           this.isHeading() ||
+           this.isListItem();
+  },
+
+  isMedia: function() {
+    return this.isImage() ||
+           this.isVideo();
+  },
+
+  isListItem: function() {
+    return this.isOrderedListItem() ||
+           this.isUnorderedListItem();
   },
 
   // ----------------------------------------------
@@ -70,81 +125,36 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     return this.isText() && this._text == '';
   },
 
-  // ----------------------------------------------
-  //  Type Queries
-  // ----------------------------------------------
-
-  isParagraph: function() {
-    return this._type == this.TYPES.PARAGRAPH;
+  supportsMarkupType: function(markupType) {
+    switch(markupType) {
+      case 'STRONG':
+      case 'EMPHASIS':
+        return this.isText() && !this.isHeading();
+      case 'ANCHOR':
+        return this.isText();
+    }
   },
 
-  isQuote: function() {
-    return this._type == this.TYPES.QUOTE;
+  supportsLayout: function() {
+    return this.isMedia() || this.isQuote();
   },
 
-  isHeading1: function() {
-    return this._type == this.TYPES.HEADING1;
+  supportsMetadata: function() {
+    return this.isMedia();
   },
 
-  isHeading2: function() {
-    return this._type == this.TYPES.HEADING2;
-  },
-
-  isHeading3: function() {
-    return this._type == this.TYPES.HEADING3;
-  },
-
-  isHeading: function() {
-    return this.isHeading1() ||
-           this.isHeading2() ||
-           this.isHeading3();
-  },
-
-  isOrderedListItem: function() {
-    return this._type == this.TYPES.ORDERED_LIST_ITEM;
-  },
-
-  isUnorderedListItem: function() {
-    return this._type == this.TYPES.UNORDERED_LIST_ITEM;
-  },
-
-  isDivider: function() {
-    return this._type == this.TYPES.DIVIDER;
-  },
-
-  isImage: function() {
-    return this._type == this.TYPES.IMAGE;
-  },
-
-  isVideo: function() {
-    return this._type == this.TYPES.VIDEO;
-  },
-
-  isText: function() {
-    return this.isParagraph() ||
-           this.isQuote() ||
-           this.isHeading1() ||
-           this.isHeading2() ||
-           this.isHeading3() ||
-           this.isOrderedListItem() ||
-           this.isUnorderedListItem();
-  },
-
-  isMedia: function() {
-    return this.isImage() ||
-           this.isVideo();
-  },
-
-  isListItem: function() {
-    return this.isOrderedListItem() ||
-           this.isUnorderedListItem();
+  // Return true if every character within the
+  // given offset range is marked up with the given
+  // type
+  isRangeMarkedUpAs: function(type, startOffset, endOffset) {
+    return this._markups && this._markups.isRangeMarkedUpAs(type, startOffset, endOffset);
   },
 
   // ----------------------------------------------
   //  Mutators
   // ----------------------------------------------
 
-  setType: function(newType, attrs) {
+  setType: function(newType, attrs, options) {
     if (this._type != newType) {
       var newAttrs = {
         type:   newType,
@@ -152,7 +162,7 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
       };
       for (var attrname in attrs) { newAttrs[attrname] = attrs[attrname]; }
       this._setAttributes(newAttrs);
-      this.trigger('typechanged');
+      if (!options || !options['silent']) this.trigger('changed');
     }
   },
 
@@ -163,26 +173,23 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
-  setLayout: function(layout) {
+  setLayout: function(layout, options) {
     if (this._layout != layout) {
       this._layout = layout;
-      this.trigger('changed');
+      if (!options || !options['silent']) this.trigger('changed');
     }
   },
 
   // Marks up text in the given range with the
   // given type. Or, if the entire range is already
   // marked up in the type, unmarks it.
-  markup: function(startOffset, endOffset, type) {
-
-    // On headers, only permit anchors (i.e. not
-    // strong or em)
-    if (this.isHeading() && !this.isAnchor()) return;
+  markup: function(startOffset, endOffset, type, options) {
+    if (!this.supportsMarkupType(type)) return;
 
     // The `MediumEditor.MarkupCollection.add`
     // method takes care of this behaviour
     this._markups.add(new MediumEditor.MarkupModel({ type: type, start: startOffset, end: endOffset }));
-    this.trigger('changed');
+    if (!options || !options['silent']) this.trigger('changed');
   },
 
   setMetadata: function(key, value) {
@@ -192,57 +199,16 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
-  // ----------------------------------------------
-  //  Instance Methods
-  // ----------------------------------------------
-
-  // Return true if every character within the
-  // given offset range is marked up with the given
-  // type
-  isRangeMarkedUpAs: function(type, startOffset, endOffset) {
-    return this._markups.isRangeMarkedUpAs(type, startOffset, endOffset);
-  },
-
-  // ----------------------------------------------
-  //  Utilities
-  // ----------------------------------------------
-
   // Called by the constructor and by setType. Sets
   // the given attributes (and provides defaults)
   // and nulls any which aren't appropriate for the
   // type (e.g. metadata on a paragraph element)
   _setAttributes: function(attrs) {
-    var type = attrs['type'] || 'PARAGRAPH';
-    if (typeof type == 'string' || type instanceof String) {
-      this._type = this.TYPES[type.toUpperCase()];
-    } else {
-      this._type = type;
-    }
-    this._text = this._typeSupportsText() ? (attrs['text'] || '') : null;
-    this._layout = this._typeSupportsLayout() ? (attrs['layout'] || '') : null;
-    this._markups = this._typeSupportsText() ? new MediumEditor.MarkupCollection() : null;
-    this._metadata = this._typeSupportsMetadata() ? (attrs['metadata'] || {}) : null;
-  },
-
-  _typeSupportsText: function() {
-    return  this._type == this.TYPES.PARAGRAPH ||
-            this._type == this.TYPES.QUOTE ||
-            this._type == this.TYPES.HEADING1 ||
-            this._type == this.TYPES.HEADING2 ||
-            this._type == this.TYPES.HEADING3 ||
-            this._type == this.TYPES.ORDERED_LIST_ITEM ||
-            this._type == this.TYPES.UNORDERED_LIST_ITEM;
-  },
-
-  _typeSupportsLayout: function() {
-    return  this._type == this.TYPES.QUOTE ||
-            this._type == this.TYPES.IMAGE ||
-            this._type == this.TYPES.VIDEO;
-  },
-
-  _typeSupportsMetadata: function() {
-    return  this._type == this.TYPES.IMAGE ||
-            this._type == this.TYPES.VIDEO;
-  },
+    this._type = attrs['type'] || 'PARAGRAPH';
+    this._text = this.isText() ? (attrs['text'] || '') : null;
+    this._layout = this.supportsLayout() ? (attrs['layout'] || 'SINGLE-COLUMN') : 'SINGLE-COLUMN';
+    this._markups = this.isText() ? new MediumEditor.MarkupCollection() : null;
+    this._metadata = this.supportsMetadata() ? (attrs['metadata'] || {}) : null;
+  }
 
 });

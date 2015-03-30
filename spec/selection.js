@@ -40,38 +40,3 @@ describe('Highlighting a range, then clicking within that range', function() {
     expect(selectionDOM.startOffset).toEqual(selectionDOM.endOffset);
   });
 });
-
-describe('Triple-clicking a paragraph', function() {
-  it('should set the selection model to the end offset of the paragraph, not offset 0 of the next', function() {
-
-    // This test exists because by default,
-    // `window.getSelection()` will report a
-    // paragraph selection as starting at offset 0
-    // of the paragraph and ending at offset 0 of
-    // the next. That causes problems for things
-    // like markups and enter/backspace.
-
-    var page = new TestPage();
-    page.get();
-    var doc = $('.medium-editor-document');
-    doc.sendKeys("Test paragraph");
-    doc.sendKeys(protractor.Key.ENTER);
-    doc.sendKeys("Another test paragraph");
-    doc.sendKeys(protractor.Key.ARROW_UP);
-    for(var i = 0; i < 14; i++) {
-      doc.sendKeys(protractor.Key.ARROW_LEFT);
-    }
-    doc.sendKeys(
-      protractor.Key.SHIFT,
-      protractor.Key.ARROW_DOWN,
-      protractor.Key.NULL
-    );
-
-    var selectionModel = page.selectionModel();
-    expect(selectionModel.startIx).toEqual(0);
-    expect(selectionModel.startOffset).toEqual(0);
-    expect(selectionModel.endIx).toEqual(0);
-    expect(selectionModel.endOffset).toEqual(14);
-
-  });
-});

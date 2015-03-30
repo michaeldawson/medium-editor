@@ -120,11 +120,8 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
 
         break;
       case 'divider':
-        this._model.changeBlockType('DIVIDER', selectionModel);
-        selectionModel.set({
-          ix:       selectionModel._startIx + 1,
-          offset:   0
-        });
+        selectionModel.startBlock().setType('DIVIDER');
+        selectionModel.caret(selectionModel._startIx + 1, 0);
         break;
     }
   },
@@ -149,7 +146,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
 
           // Replace the current block with a
           // figure containing the image
-          this._model.changeBlockType('IMAGE', { metadata: { src: e.target.result } }, this._selection().model());
+          this._selection().model().startBlock().setType('IMAGE', { metadata: { src: e.target.result } });
 
         }).bind(this);
         reader.readAsDataURL(fileInput.files[0]);
