@@ -146,6 +146,6 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     } else {
       this._type = 'RANGE';
     }
-  },
+  }
 
 });

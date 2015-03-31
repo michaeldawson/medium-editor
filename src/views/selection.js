@@ -69,10 +69,6 @@ MediumEditor.SelectionView = MediumEditor.View.extend({
 
       this.deselect();
 
-    } else if (this._model.isMedia()) {
-
-      // TODO
-
     } else {
 
       var range;

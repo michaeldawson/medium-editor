@@ -46,6 +46,6 @@ MediumEditor.DocumentView = MediumEditor.View.extend({
   _render: function() {
     this._el.innerHTML = MediumEditor.ModelDOMMapper.toHTML(this._model);
     this._el.className = [this.CLASS_NAME, this._model.isBlank() ? this.BLANK_CLASS_NAME : ''].join(' ');
-  },
+  }
 
 });

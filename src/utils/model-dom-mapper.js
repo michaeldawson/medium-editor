@@ -49,7 +49,14 @@ MediumEditor.ModelDOMMapper = {
 
   // Given a model, produce the HTML representation
   // as a string. Takes block models or document.
-  toHTML: function(model) {
+  // By default, the HTML is for editing (e.g. it
+  // has contenteditable attributes set). Pass
+  // { for: 'output' } to get HTML without these
+  // attributes.
+  toHTML: function(model, options) {
+
+    options = typeof options == 'undefined' ? {} : options;
+    options['for'] = typeof options['for'] == 'undefined' ? 'editing' : options['for'];
 
     if (model instanceof MediumEditor.BlockModel) {
 
@@ -68,9 +75,9 @@ MediumEditor.ModelDOMMapper = {
         case model.isDivider():               tag = 'div'; break;     // Inner HTML is a hr, but we wrap it in a div so it can't be selected
       }
 
-      var openingTag = "<" + tag + ( model.isDivider() ? ' contenteditable="false"' : '' ) + ( this._layoutType(model.layout()) == 'class' ? ' class="' + model.layout().toLowerCase() + '"' : '' ) + ">";
+      var openingTag = "<" + tag + ( !model.isText() && options['for'] == 'editing' ? ' contenteditable="false"' : '' ) + ( this._layoutType(model.layout()) == 'class' ? ' class="' + model.layout().toLowerCase() + '"' : '' ) + ">";
       var closingTag = "</" + tag + ">";
-      var html = openingTag + this.innerHTML(model) + closingTag;
+      var html = openingTag + this._innerHTML(model, options) + closingTag;
       return html;
 
     } else if (model instanceof MediumEditor.DocumentModel) {
@@ -129,7 +136,7 @@ MediumEditor.ModelDOMMapper = {
   // string. This is separated from the `outerHTML`
   // method because when re-rendering views upon
   // content change, we only want the inner HTML.
-  innerHTML: function(model) {
+  _innerHTML: function(model, options) {
 
     if (model.isText()) {
 
@@ -157,7 +164,7 @@ MediumEditor.ModelDOMMapper = {
 
       // Add the caption (if it exists)
       if (model.metadata()['caption']) {
-        innerHTML += "<figcaption>" + model.metadata()['caption'] + "</figcaption>";
+        innerHTML += "<figcaption " + (options['for'] == 'editing' ? "contenteditable='true'" : "") + ">" + model.metadata()['caption'] + "</figcaption>";
       }
 
       return innerHTML;
@@ -376,7 +383,7 @@ MediumEditor.ModelDOMMapper = {
   // and the text offset in model space.
   domSpaceToModelSpace: function(node, offset, range, start) {
     var element = this._blockElementFromNode(node);
-    var ix = this._getIndexFromBlockElement(element);
+    var ix = this.getIndexFromBlockElement(element);
     var offset = this._measureTextOffset(offset, node, element, range, start);
     return {
       ix:       ix,
@@ -400,7 +407,7 @@ MediumEditor.ModelDOMMapper = {
   // Given a block element, determine what the
   // index is within model space, considering
   // layout and other containers
-  _getIndexFromBlockElement: function(el) {
+  getIndexFromBlockElement: function(el) {
 
     // Find the document element
     var documentEl = el;

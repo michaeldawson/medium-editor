@@ -20,7 +20,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
     // collection of block models.
     this._blocks = MediumEditor.ModelDOMMapper.parseHTMLIntoBlockCollection({
       document: this,
-      html: attrs['html'] || ''
+      html: attrs['html'] || '<p></p>'
     });
 
     // Attach changed event listeners

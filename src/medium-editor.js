@@ -41,10 +41,24 @@ MediumEditor.prototype = {
     // Create the model
     this._documentModel = new MediumEditor.DocumentModel({ html: startingHTML });
 
+    // If attached to a textarea, listen to the
+    // change event and update it
+    if (this._el.tagName.toLowerCase() == 'textarea') {
+      this._documentModel.on('changed', this._onDocumentChanged.bind(this));
+    }
+
     // Create the editor view and insert it into
     // the page before the given element
     this._editorView = new MediumEditor.EditorView({ model: this._documentModel });
     this._el.parentNode.insertBefore(this._editorView._el, this._el);
+  },
+
+  // ----------------------------------------------
+  //  Event handlers
+  // ----------------------------------------------
+
+  _onDocumentChanged: function() {
+    this._el.value = MediumEditor.ModelDOMMapper.toHTML(this._documentModel);
   },
 
   // ----------------------------------------------

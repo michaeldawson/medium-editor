@@ -43,6 +43,7 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     this.on('keydown', this._document.el(), this._onKeyDown.bind(this));
     this.on('mouseup', document, this._onMouseUp.bind(this));
     this.on('paste', this._document.el(), this._onPaste.bind(this));
+    this.on('mousedown', this._document._el, this._onMouseDown.bind(this));
   },
 
   // Listen for normal editing changes. Let them
@@ -365,6 +366,18 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     setTimeout(function() {
       this._selection.determineFromBrowser();
     }.bind(this), 10);
+  },
+
+  _onMouseDown: function(e) {
+
+    // Did the user click on an image/video? If so,
+    // set selection on it.
+    if (e.target.tagName.toLowerCase() == 'img' &&
+        e.target.parentNode.tagName.toLowerCase() == 'figure') {
+      var element = e.target.parentNode;
+      var ix = MediumEditor.ModelDOMMapper.getIndexFromBlockElement(element);
+      this._selection.model().media(ix);
+    }
   },
 
   _onPaste: function(e) {
