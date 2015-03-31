@@ -110,9 +110,11 @@ MediumEditor.ModelDOMMapper = {
         // If this block has a different wrapper to
         // the last, or is the first block, open
         // the new wrapper
-        if (prevBlock == null || (this._layoutType(currentBlock.layout()) == 'wrapper' && currentWrapper != currentBlock.layout())) {
-          toReturn += "<div class='layout-" + currentBlock.layout().toLowerCase() + "'>";
-          currentWrapper = currentBlock.layout();
+        var layout = currentBlock.layout();
+        var wrapper = this._layoutType(layout) == 'wrapper' ? layout : 'SINGLE-COLUMN';
+        if (wrapper != currentWrapper) {
+          toReturn += "<div class='layout-" + wrapper.toLowerCase() + "'>";
+          currentWrapper = wrapper;
         }
 
         // If this block is a list item and the

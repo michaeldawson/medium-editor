@@ -3,7 +3,7 @@
 }
 
 .medium-editor-document {
-  margin-top: 50px;
+  margin: 50px 0;
 }
 
 .medium-editor-document.medium-editor-document-blank div *:before {
