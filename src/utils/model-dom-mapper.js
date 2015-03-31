@@ -20,7 +20,15 @@ MediumEditor.ModelDOMMapper = {
       var layout = child.className.substring(7).toUpperCase();
       for(var j = 0; j < child.children.length; j++) {
         var grandchild = child.children[j];
-        toReturn.add(this._parseNodeIntoBlock(grandchild, layout));
+        var tagName = grandchild.tagName.toLowerCase();
+        if (tagName == 'ol' || tagName == 'ul') {
+          for(var k = 0; k < grandchild.children.length; k++) {
+            var greatGrandchild = grandchild.children[k];
+            toReturn.add(this._parseNodeIntoBlock(greatGrandchild, layout));
+          }
+        } else {
+          toReturn.add(this._parseNodeIntoBlock(grandchild, layout));
+        }
       }
     }
     return toReturn;
@@ -29,6 +37,7 @@ MediumEditor.ModelDOMMapper = {
   _parseNodeIntoBlock: function(node, layout) {
 
     // Determine the type from the tag name
+    layout = node.className || layout;
     var attrs = { text: node.innerText, layout: layout };
     var tagName = node.tagName.toLowerCase();
     switch(tagName) {
@@ -45,7 +54,7 @@ MediumEditor.ModelDOMMapper = {
         if (node.children.length > 1) attrs['metadata']['caption'] = node.children[1].innerText;
         break;
       case 'li':
-        // TODO
+        attrs['type'] = node.parentNode.tagName.toLowerCase() == 'ol' ? 'ORDERED_LIST_ITEM' : 'UNORDERED_LIST_ITEM';
         break;
     }
     return new MediumEditor.BlockModel(attrs);
