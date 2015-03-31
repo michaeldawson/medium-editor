@@ -16,16 +16,20 @@ MediumEditor.ModelDOMMapper = {
     var el = document.createElement('div');
     el.innerHTML = attrs.html.trim();
     for(var i = 0; i < el.children.length; i++) {
-      var node = el.children[i];
-      toReturn.add(this._parseNodeIntoBlock(node));
+      var child = el.children[i];
+      var layout = child.className.substring(7).toUpperCase();
+      for(var j = 0; j < child.children.length; j++) {
+        var grandchild = child.children[j];
+        toReturn.add(this._parseNodeIntoBlock(grandchild, layout));
+      }
     }
     return toReturn;
   },
 
-  _parseNodeIntoBlock: function(node) {
+  _parseNodeIntoBlock: function(node, layout) {
 
     // Determine the type from the tag name
-    var attrs = { text: node.innerText };
+    var attrs = { text: node.innerText, layout: layout };
     var tagName = node.tagName.toLowerCase();
     switch(tagName) {
       case 'p':           attrs['type'] = 'PARAGRAPH'; break;

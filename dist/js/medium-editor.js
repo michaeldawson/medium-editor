@@ -288,16 +288,20 @@ MediumEditor.ModelDOMMapper = {
     var el = document.createElement('div');
     el.innerHTML = attrs.html.trim();
     for(var i = 0; i < el.children.length; i++) {
-      var node = el.children[i];
-      toReturn.add(this._parseNodeIntoBlock(node));
+      var child = el.children[i];
+      var layout = child.className.substring(7).toUpperCase();
+      for(var j = 0; j < child.children.length; j++) {
+        var grandchild = child.children[j];
+        toReturn.add(this._parseNodeIntoBlock(grandchild, layout));
+      }
     }
     return toReturn;
   },
 
-  _parseNodeIntoBlock: function(node) {
+  _parseNodeIntoBlock: function(node, layout) {
 
     // Determine the type from the tag name
-    var attrs = { text: node.innerText };
+    var attrs = { text: node.innerText, layout: layout };
     var tagName = node.tagName.toLowerCase();
     switch(tagName) {
       case 'p':           attrs['type'] = 'PARAGRAPH'; break;
@@ -321,7 +325,14 @@ MediumEditor.ModelDOMMapper = {
 
   // Given a model, produce the HTML representation
   // as a string. Takes block models or document.
-  toHTML: function(model) {
+  // By default, the HTML is for editing (e.g. it
+  // has contenteditable attributes set). Pass
+  // { for: 'output' } to get HTML without these
+  // attributes.
+  toHTML: function(model, options) {
+
+    options = typeof options == 'undefined' ? {} : options;
+    options['for'] = typeof options['for'] == 'undefined' ? 'editing' : options['for'];
 
     if (model instanceof MediumEditor.BlockModel) {
 
@@ -340,9 +351,9 @@ MediumEditor.ModelDOMMapper = {
         case model.isDivider():               tag = 'div'; break;     // Inner HTML is a hr, but we wrap it in a div so it can't be selected
       }
 
-      var openingTag = "<" + tag + ( !model.isText() ? ' contenteditable="false"' : '' ) + ( this._layoutType(model.layout()) == 'class' ? ' class="' + model.layout().toLowerCase() + '"' : '' ) + ">";
+      var openingTag = "<" + tag + ( !model.isText() && options['for'] == 'editing' ? ' contenteditable="false"' : '' ) + ( this._layoutType(model.layout()) == 'class' ? ' class="' + model.layout().toLowerCase() + '"' : '' ) + ">";
       var closingTag = "</" + tag + ">";
-      var html = openingTag + this.innerHTML(model) + closingTag;
+      var html = openingTag + this._innerHTML(model, options) + closingTag;
       return html;
 
     } else if (model instanceof MediumEditor.DocumentModel) {
@@ -401,7 +412,7 @@ MediumEditor.ModelDOMMapper = {
   // string. This is separated from the `outerHTML`
   // method because when re-rendering views upon
   // content change, we only want the inner HTML.
-  innerHTML: function(model) {
+  _innerHTML: function(model, options) {
 
     if (model.isText()) {
 
@@ -429,7 +440,7 @@ MediumEditor.ModelDOMMapper = {
 
       // Add the caption (if it exists)
       if (model.metadata()['caption']) {
-        innerHTML += "<figcaption contenteditable='true'>" + model.metadata()['caption'] + "</figcaption>";
+        innerHTML += "<figcaption " + (options['for'] == 'editing' ? "contenteditable='true'" : "") + ">" + model.metadata()['caption'] + "</figcaption>";
       }
 
       return innerHTML;
@@ -2975,10 +2986,24 @@ MediumEditor.prototype = {
     // Create the model
     this._documentModel = new MediumEditor.DocumentModel({ html: startingHTML });
 
+    // If attached to a textarea, listen to the
+    // change event and update it
+    if (this._el.tagName.toLowerCase() == 'textarea') {
+      this._documentModel.on('changed', this._onDocumentChanged.bind(this));
+    }
+
     // Create the editor view and insert it into
     // the page before the given element
     this._editorView = new MediumEditor.EditorView({ model: this._documentModel });
     this._el.parentNode.insertBefore(this._editorView._el, this._el);
+  },
+
+  // ----------------------------------------------
+  //  Event handlers
+  // ----------------------------------------------
+
+  _onDocumentChanged: function() {
+    this._el.value = MediumEditor.ModelDOMMapper.toHTML(this._documentModel);
   },
 
   // ----------------------------------------------
