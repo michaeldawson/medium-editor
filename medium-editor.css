@@ -6,7 +6,13 @@
   margin: 50px 0;
 }
 
-.medium-editor-document.medium-editor-document-blank div *:before {
+.medium-editor-document.medium-editor-document-blank p:before,
+.medium-editor-document.medium-editor-document-blank h2:before,
+.medium-editor-document.medium-editor-document-blank h3:before,
+.medium-editor-document.medium-editor-document-blank h4:before,
+.medium-editor-document.medium-editor-document-blank blockquote:before,
+.medium-editor-document.medium-editor-document-blank ol li:before,
+.medium-editor-document.medium-editor-document-blank ul li:before {
   content: 'Start typing ...';
   color: rgba(0,0,0,0.2);
   position: absolute;

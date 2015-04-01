@@ -46,7 +46,7 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
   },
 
   isBlank: function() {
-    return this._blocks.size() == 1 && this._blocks.at(0).text() == '';
+    return this._blocks.size() == 1 && !this._blocks.at(0).isListItem() && this._blocks.at(0).text() == '';
   },
 
   // ----------------------------------------------

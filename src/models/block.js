@@ -154,13 +154,12 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
   //  Mutators
   // ----------------------------------------------
 
-  setType: function(newType, attrs, options) {
+  setType: function(newType, options) {
     if (this._type != newType) {
       var newAttrs = {
         type:   newType,
         text:   this._text,
       };
-      for (var attrname in attrs) { newAttrs[attrname] = attrs[attrname]; }
       this._setAttributes(newAttrs);
       if (!options || !options['silent']) this.trigger('changed');
     }

@@ -7,6 +7,10 @@
 
 MediumEditor.EditorView = MediumEditor.View.extend({
 
+  ORDERED_LIST_ITEM_REGEX: /^1\.(\s|&nbsp;)/,
+
+  UNORDERED_LIST_ITEM_REGEX: /^\*(\s|&nbsp;)/,
+
   // ----------------------------------------------
   //  Constructor
   // ----------------------------------------------
@@ -69,18 +73,20 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     var html = this._selection.startBlockElement().innerHTML.trim();
     if (html == "<br>") html = "";
 
-    if (block.isParagraph() && html.match(/^1\.\s/)) {
+    if (block.isParagraph() && html.match(this.ORDERED_LIST_ITEM_REGEX)) {
 
       // Paragraphs starting with '1. ' - convert
       // to a list item
-      block.setType('ORDERED_LIST_ITEM', { text: html.substring(3) });
+      block.setType('ORDERED_LIST_ITEM', { silent: true });
+      block.setHTML(html.replace(this.ORDERED_LIST_ITEM_REGEX, ''));
       this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
 
-    } else if (block.isParagraph() && html.match(/^\*\s/)) {
+    } else if (block.isParagraph() && html.match(this.UNORDERED_LIST_ITEM_REGEX)) {
 
       // Paragraphs starting with '* ' - convert
       // to a list item
-      block.setType('UNORDERED_LIST_ITEM', { text: html.substring(2) });
+      block.setType('UNORDERED_LIST_ITEM', { silent: true });
+      block.setHTML(html.replace(this.UNORDERED_LIST_ITEM_REGEX, ''));
       this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
 
     } else {
