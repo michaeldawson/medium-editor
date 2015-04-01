@@ -166,10 +166,21 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     }
   },
 
+  // Replace the block text
   setText: function(text) {
     if (this._text != text) {
-      this._shiftMarkupOffsets(text);
       this._text = text;
+      this.trigger('changed');
+    }
+  },
+
+  // Replace the block text and markups
+  setHTML: function(html) {
+    if (MediumEditor.ModelDOMMapper.toHTML(this) != html) {
+      var contents = MediumEditor.ModelDOMMapper.parseHTMLIntoBlockContents(html);
+      this._text = contents.text;
+      this._markups.clear();
+      for(var i = 0; i < contents.markups.length; i++) this._markups.add(contents.markups[i]);
       this.trigger('changed');
     }
   },
@@ -210,63 +221,6 @@ MediumEditor.BlockModel = MediumEditor.Model.extend({
     this._layout = this.supportsLayout() ? (attrs['layout'] || 'SINGLE-COLUMN') : 'SINGLE-COLUMN';
     this._markups = this.isText() ? new MediumEditor.MarkupCollection() : null;
     this._metadata = this.supportsMetadata() ? (attrs['metadata'] || {}) : null;
-  },
-
-  // When text changes in a block, we need to
-  // modify the markup offsets. For example, if we
-  // remove a character from index 3 and we have a
-  // markup from offset 7 to offset 15, those
-  // indices need to be reduced by one. We use a
-  // text diff algorithm for determining how many
-  // characters were added/removed and from where.
-  _shiftMarkupOffsets: function(newText) {
-
-    if (this._markups.size() == 0) return;  // Quick exit
-
-    // Will return an object in the form
-    // { type: 'add', start: 3, added: 1, removed: 2 }
-    // where type is add, remove, replace or none.
-    var difference = MediumEditor.Util.diff(this._text, newText);
-
-    if (difference.type == 'none') return;  // No change
-
-    // If we're removing or replacing (which we
-    // implement as simply removing then adding),
-    // every offset greater than the start gets
-    // shifted backward by the number of characters
-    // removed (clamped to the start index)
-    if (difference.type == 'remove' || difference.type == 'replace') {
-
-      for(var i = 0; i < this._markups.size(); i++) {
-        var markup = this._markups.at(i);
-        if (markup.start() > difference.start) {
-          markup.setStart(Math.max(difference.start, markup.start() - difference.removed), { silent: true });
-        }
-        if (markup.end() > difference.start) {
-          markup.setEnd(Math.max(difference.start, markup.end() - difference.removed), { silent: true });
-        }
-        if (markup.start() == markup.end()) {
-          this._markups.removeAt(i);
-          i--;
-        }
-      }
-    }
-
-    // If we're adding or replacing, every offset
-    // greater than or equal to the start gets
-    // shifted forward by the number of characters
-    // added
-    if (difference.type == 'add' || difference.type == 'replace') {
-
-      for(var i = 0; i < this._markups.size(); i++) {
-        var markup = this._markups.at(i);
-        if (markup.start() >= difference.start) {
-          markup.setStart(Math.max(difference.start, markup.start() + difference.added), { silent: true });
-        }
-        if (markup.end() >= difference.start) {
-          markup.setEnd(Math.max(difference.start, markup.end() + difference.added), { silent: true });
-        }
-      }
-    }
   }
+
 });

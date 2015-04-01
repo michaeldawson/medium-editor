@@ -37,8 +37,8 @@ MediumEditor.ModelDOMMapper = {
   _parseNodeIntoBlock: function(node, layout) {
 
     // Determine the type from the tag name
-    layout = node.className || layout;
-    var attrs = { text: node.innerText, layout: layout };
+    var attrs = this._parseNodeIntoBlockContents(node);
+    attrs.layout = node.className || layout;
     var tagName = node.tagName.toLowerCase();
     switch(tagName) {
       case 'p':           attrs['type'] = 'PARAGRAPH'; break;
@@ -58,6 +58,44 @@ MediumEditor.ModelDOMMapper = {
         break;
     }
     return new MediumEditor.BlockModel(attrs);
+  },
+
+  // Given a HTML string, returns text and markups
+  parseHTMLIntoBlockContents: function(html) {
+    var el = document.createElement('div');
+    el.innerHTML = html.trim();
+    return this._parseNodeIntoBlockContents(el);
+  },
+
+  _parseNodeIntoBlockContents: function(node, text, markups) {
+    text = typeof text == 'undefined' ? '' : text;
+    markups = typeof markups == 'undefined' ? [] : markups;
+
+    var start = text.length;
+    for(var i = 0; i < node.childNodes.length; i++) {
+      var child = node.childNodes[i];
+      if (child.nodeType == 3) {
+
+        // Text node
+        text = text + child.nodeValue;
+
+      } else if (child.nodeType == 1) {
+
+        // Element node
+        var result = this._parseNodeIntoBlockContents(child, text, markups);
+        text = result.text;
+      }
+    }
+
+    var end = text.length;
+    if (node.nodeType == 1 && end > start) {
+      var tagName = node.tagName.toUpperCase();
+      if (['STRONG','EM'].indexOf(tagName) >= 0) {
+        markups.push(new MediumEditor.MarkupModel({ type: tagName == 'STRONG' ? 'STRONG' : 'EMPHASIS', start: start, end: end }));
+      }
+    }
+
+    return { text: text, markups: markups };
   },
 
   // Given a model, produce the HTML representation

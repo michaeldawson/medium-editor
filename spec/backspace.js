@@ -254,15 +254,15 @@ describe('Highlighting over multiple blocks then hitting backspace', function() 
     );
 
     expect(doc.all(by.css('p')).count()).toEqual(1);
-    expect(doc.all(by.css('p')).get(0).getText()).toEqual("The azy dog");
+    expect(doc.all(by.css('p')).get(0).getText()).toEqual("The qazy dog");
 
     var selectionModel = page.selectionModel();
     expect(selectionModel.startIx).toEqual(0);
-    expect(selectionModel.startOffset).toEqual(4);
+    expect(selectionModel.startOffset).toEqual(5);
 
     var selectionDOM = page.selectionDOM();
-    expect(selectionDOM.startNodeValue).toEqual("The azy dog");
-    expect(selectionDOM.startOffset).toEqual(4);
+    expect(selectionDOM.startNodeValue).toEqual("The qazy dog");
+    expect(selectionDOM.startOffset).toEqual(5);
   });
 });
 

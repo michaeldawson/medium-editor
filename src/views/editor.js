@@ -66,27 +66,27 @@ MediumEditor.EditorView = MediumEditor.View.extend({
     // Flush the changes through the pipeline and
     // handle special cases like lists and captions.
     var block = this._selectionModel.startBlock();
-    var text = this._selection.startBlockElement().innerText;
-    if (text == "\n") text = "";
+    var html = this._selection.startBlockElement().innerHTML.trim();
+    if (html == "<br>") html = "";
 
-    if (block.isParagraph() && text.match(/^1\.\s/)) {
+    if (block.isParagraph() && html.match(/^1\.\s/)) {
 
       // Paragraphs starting with '1. ' - convert
       // to a list item
-      block.setType('ORDERED_LIST_ITEM', { text: text.substring(3) });
+      block.setType('ORDERED_LIST_ITEM', { text: html.substring(3) });
       this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
 
-    } else if (block.isParagraph() && text.match(/^\*\s/)) {
+    } else if (block.isParagraph() && html.match(/^\*\s/)) {
 
       // Paragraphs starting with '* ' - convert
       // to a list item
-      block.setType('UNORDERED_LIST_ITEM', { text: text.substring(2) });
+      block.setType('UNORDERED_LIST_ITEM', { text: html.substring(2) });
       this._selectionModel.caret(this._selectionModel.startIx(), 0, { triggerEvent: false });
 
     } else {
 
       // Otherwise just flush through
-      block.setText(text);
+      block.setHTML(html);
     }
 
     // Now trigger the selection event - the model
@@ -197,8 +197,8 @@ MediumEditor.EditorView = MediumEditor.View.extend({
             // into the previous.
             var prevBlockText = prevBlock.text();
             var newText = prevBlockText + startBlock.text();
-            prevBlock.setText(newText);
             this._selectionModel.caret(this._selectionModel.startIx() - 1, prevBlockText.length);
+            prevBlock.setText(newText);
             this._model.removeBlockAt(this._selectionModel.startIx() + 1);
             e.preventDefault();
           }

@@ -262,7 +262,7 @@ describe('Marking up a section of text then replacing characters', function() {
     expect(this.doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('ab<strong>cdef</strong>hello');
   });
 
-  it('should remove the markup when it is entirely replaced', function() {
+  it('should keep the markup when it is exactly typed over', function() {
     this.doc.sendKeys(
       protractor.Key.ARROW_RIGHT,
       protractor.Key.SHIFT,
@@ -273,6 +273,58 @@ describe('Marking up a section of text then replacing characters', function() {
       protractor.Key.NULL,
       'hello'
     );
-    expect(this.doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('abhellogh');
+    expect(this.doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('ab<strong>hello</strong>gh');
+  });
+
+  it('should remove the markup when it is entirely replaced', function() {
+    this.doc.sendKeys(
+      protractor.Key.ARROW_RIGHT,
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.NULL,
+      'hello'
+    );
+    expect(this.doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('ahellogh');
+  });
+});
+
+describe('Marking up a section of text then adding new characters when the text is all identical', function() {
+
+  it('should offset the indices correctly', function() {
+
+    // Exists because first attempt at markup
+    // offsets used a model-based text diff
+    // algorithm, which fails if the characters are
+    // the same.
+
+    var page = new TestPage();
+    page.get();
+    this.doc = $('.medium-editor-document');
+    this.doc.sendKeys(
+      "xxxxxxxx",
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.SHIFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.ARROW_LEFT,
+      protractor.Key.NULL
+    );
+
+    browser.sleep(150);   // Animation fade in
+    element.all(by.css('.medium-editor-highlight-menu button')).get(0).click();   // Click 'bold'
+
+    // xxXXXXxx
+    this.doc.sendKeys(
+      protractor.Key.ARROW_LEFT,
+      'x'
+    );
+    expect(this.doc.all(by.css('p')).get(0).getAttribute('innerHTML')).toEqual('xxx<strong>xxxx</strong>xx');
+
   });
 });
