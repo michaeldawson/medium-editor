@@ -273,7 +273,7 @@ MediumEditor.ModelDOMMapper = {
         // which end after this one.
         var temp = [];
         var c;
-        while((c = openTags.pop()).tag != inject.tag) {
+        while((c = openTags.pop()) && c.tag != inject.tag) {
           temp.push(c);
         }
 

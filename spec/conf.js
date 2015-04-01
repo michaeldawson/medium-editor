@@ -1,7 +1,7 @@
 exports.config = {
   seleniumAddress: 'http://localhost:4444/wd/hub',
   baseUrl: 'http://localhost:9876',
-  specs: ['backspace.js','bold.js','dividers.js','enter.js','highlight-menu.js','inline-tooltip.js','lists.js','selection.js','typeover.js']
+  specs: ['backspace.js','bold.js','diff.js','dividers.js','enter.js','highlight-menu.js','inline-tooltip.js','lists.js','selection.js','typeover.js']
 };
 
 // TODO - pasting

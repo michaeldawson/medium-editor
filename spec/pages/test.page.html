@@ -64,6 +64,7 @@
     <script src='../../src/utils/namespace.js'></script>
     <script src='../../src/utils/mvc.js'></script>
     <script src='../../src/utils/model-dom-mapper.js'></script>
+    <script src='../../src/utils/diff.js'></script>
     <script src='../../src/models/document.js'></script>
     <script src='../../src/models/block.js'></script>
     <script src='../../src/models/markup.js'></script>
@@ -81,7 +82,9 @@
   </head>
   <body>
     <textarea id='medium-editor'>
-      <p></p>
+      <div class='layout-single-column'>
+        <p></p>
+      </div>
     </textarea>
     <script type='text/javascript'>
       window.editor = new MediumEditor('#medium-editor');

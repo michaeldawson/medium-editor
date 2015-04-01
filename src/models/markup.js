@@ -77,14 +77,14 @@ MediumEditor.MarkupModel = MediumEditor.Model.extend({
   //  Mutators
   // ----------------------------------------------
 
-  setStart: function(start) {
+  setStart: function(start, options) {
     this._start = start;
-    this.trigger('changed');
+    if (!options || !options['silent']) this.trigger('changed');
   },
 
-  setEnd: function(end) {
+  setEnd: function(end, options) {
     this._end = end;
-    this.trigger('changed');
+    if (!options || !options['silent']) this.trigger('changed');
   },
 
   setMetadata: function(key, value) {

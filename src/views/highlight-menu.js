@@ -293,16 +293,23 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   _onSelectionChanged: function() {
     if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
+      this._updateButtonStates();   // Need to do this first so we can measure it's size accurately
       this._showAndPosition();
-      this._updateButtonStates();
     } else {
       this._hide();
     }
   },
 
+  // We listen to document changes too because the
+  // block type might have changed (which means the
+  // available buttons are now different), markups
+  // may have been added or the layout on a media
+  // item may have changed (and therefore the menu
+  // needs to be shifted)
   _onDocumentChanged: function() {
     if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
       this._updateButtonStates();
+      this._showAndPosition();
     }
   },
 

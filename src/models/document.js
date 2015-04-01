@@ -79,7 +79,9 @@ MediumEditor.DocumentModel = MediumEditor.Model.extend({
       var endOffset = i == selection.endIx() ? selection.endOffset() : block.text().length;
 
       // Mark it up
-      block.markup(startOffset, endOffset, type, { silent: true });
+      if (startOffset != endOffset) {
+        block.markup(startOffset, endOffset, type, { silent: true });
+      }
     }
     this.trigger('changed');
   },

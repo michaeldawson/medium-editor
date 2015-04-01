@@ -31,6 +31,13 @@
   word-wrap: break-word;
   white-space: normal;
 }
+@media only screen and (max-width: 767px) {
+  .medium-editor-document p,
+  .medium-editor-document blockquote,
+  .medium-editor-document li {
+    font-size: 16px;
+  }
+}
 
 .medium-editor-document h2,
 .medium-editor-document h3,
@@ -159,6 +166,7 @@
 .medium-editor-document .layout-single-column {
   max-width: 700px;
   margin: 0 auto;
+  padding: 0 20px;
 }
 
 .medium-editor-document .left-align {

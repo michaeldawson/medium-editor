@@ -147,6 +147,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
           // Replace the current block with a
           // figure containing the image
           this._selection().model().startBlock().setType('IMAGE', { metadata: { src: e.target.result } });
+          this._selection().model().redetermineType();
 
         }).bind(this);
         reader.readAsDataURL(fileInput.files[0]);

@@ -382,9 +382,11 @@ MediumEditor.ModelDOMMapper = {
         // If this block has a different wrapper to
         // the last, or is the first block, open
         // the new wrapper
-        if (prevBlock == null || (this._layoutType(currentBlock.layout()) == 'wrapper' && currentWrapper != currentBlock.layout())) {
-          toReturn += "<div class='layout-" + currentBlock.layout().toLowerCase() + "'>";
-          currentWrapper = currentBlock.layout();
+        var layout = currentBlock.layout();
+        var wrapper = this._layoutType(layout) == 'wrapper' ? layout : 'SINGLE-COLUMN';
+        if (wrapper != currentWrapper) {
+          toReturn += "<div class='layout-" + wrapper.toLowerCase() + "'>";
+          currentWrapper = wrapper;
         }
 
         // If this block is a list item and the
@@ -1315,6 +1317,16 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes(attrs, options);
   },
 
+  // If a block changes type (e.g. from paragraph
+  // to media) the selection type may change.
+  redetermineType: function() {
+    var oldType = this._type;
+    this._determineType();
+    if (oldType != this._type) {
+      this.trigger('changed', this);
+    }
+  },
+
   _setAttributes: function(attrs, options) {
 
     // Set default options. Supported options are
@@ -1708,6 +1720,7 @@ MediumEditor.InlineTooltipMenuView = MediumEditor.View.extend({
           // Replace the current block with a
           // figure containing the image
           this._selection().model().startBlock().setType('IMAGE', { metadata: { src: e.target.result } });
+          this._selection().model().redetermineType();
 
         }).bind(this);
         reader.readAsDataURL(fileInput.files[0]);
@@ -2027,16 +2040,23 @@ MediumEditor.HighlightMenuView = MediumEditor.View.extend({
 
   _onSelectionChanged: function() {
     if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
+      this._updateButtonStates();   // Need to do this first so we can measure it's size accurately
       this._showAndPosition();
-      this._updateButtonStates();
     } else {
       this._hide();
     }
   },
 
+  // We listen to document changes too because the
+  // block type might have changed (which means the
+  // available buttons are now different), markups
+  // may have been added or the layout on a media
+  // item may have changed (and therefore the menu
+  // needs to be shifted)
   _onDocumentChanged: function() {
     if (this._selectionModel().isRange() || this._selectionModel().isMedia()) {
       this._updateButtonStates();
+      this._showAndPosition();
     }
   },
 

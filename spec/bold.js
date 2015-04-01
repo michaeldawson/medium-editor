@@ -157,6 +157,7 @@ describe('Cmd + b when selection spanning multiple blocks', function() {
   });
 });
 
+// TODO
 // bold spanning multiple blocks including media, divider, quote or any other not permitted to bold
 // bold on range entirely covering an existing bold
 // bold on range entirely within an existing bold

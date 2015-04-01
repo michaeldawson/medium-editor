@@ -109,6 +109,16 @@ MediumEditor.SelectionModel = MediumEditor.Model.extend({
     this._setAttributes(attrs, options);
   },
 
+  // If a block changes type (e.g. from paragraph
+  // to media) the selection type may change.
+  redetermineType: function() {
+    var oldType = this._type;
+    this._determineType();
+    if (oldType != this._type) {
+      this.trigger('changed', this);
+    }
+  },
+
   _setAttributes: function(attrs, options) {
 
     // Set default options. Supported options are
